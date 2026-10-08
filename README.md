@@ -55,12 +55,33 @@ O GitHub Actions (`.github/workflows/ci.yml`) roda lint, tipos, todos os testes 
 
 ---
 
+## Modelo para testes (o jeito mais rápido)
+
+1. **Supabase**: crie um projeto → **SQL Editor** → cole `supabase/instalar.sql` → Run.
+   Depois cole `supabase/demonstracao.sql` → Run.
+2. **Authentication → Sign In / Providers → Email**: desligue **Confirm email** (só no projeto de
+   teste; assim o cadastro entra direto, sem esperar e-mail).
+3. **Vercel**: importe o repositório e cadastre 4 variáveis: `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` e `NEXT_PUBLIC_SITE_URL`
+   (o endereço que a Vercel der, ex.: `https://agilizou-xxxx.vercel.app`). Deploy.
+4. **Supabase → Authentication → URL Configuration**: Site URL = endereço da Vercel; em Redirect
+   URLs adicione `https://SEU-ENDERECO.vercel.app/**`.
+5. Abra o site, clique em **Testar grátis** e cadastre-se.
+6. No **SQL Editor**: `select preencher_demonstracao('seu-email@exemplo.com');` e atualize o app.
+   A conta vira a "Barbearia do Zé (demonstração)": 6 meses de vendas, despesas, estoque (2 itens
+   abaixo do mínimo), clientes, agenda com presenças e faltas, contas vencidas e a vencer, plano
+   Profissional em teste por 30 dias.
+
+Para testar outro nicho do zero, é só cadastrar outro e-mail e não rodar o preenchimento.
+Pagamento (Asaas), WhatsApp e e-mails ficam em modo simulado até você configurar as chaves.
+
 ## Colocando no ar (passo a passo)
 
 ### 1. Supabase
 
 1. Crie o projeto em supabase.com (região São Paulo).
-2. **SQL Editor**: rode os arquivos de `supabase/migrations/` **em ordem** (01 a 12).
+2. **SQL Editor**: cole e rode `supabase/instalar.sql` (todas as migrations juntas; é gerado com
+   `npm run sql:juntar` a partir de `supabase/migrations/`, que também podem ser rodadas em ordem).
    Não rode `supabase/tests/supabase_stub.sql` (é só para testes).
    Com a CLI: `supabase link` e `supabase db push`.
 3. **Authentication → URL Configuration**: Site URL `https://agilizou.app`; Redirect URLs

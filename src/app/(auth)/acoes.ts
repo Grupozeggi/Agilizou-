@@ -35,7 +35,7 @@ export async function cadastrar(_: EstadoForm, form: FormData): Promise<EstadoFo
   const supabase = await criarClienteServidor();
   // Os metadados vão em user_metadata (editável pelo usuário) e servem só
   // para nomear a empresa. O papel de admin NUNCA vem daqui.
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: r.data.email,
     password: r.data.senha,
     options: {
@@ -44,6 +44,9 @@ export async function cadastrar(_: EstadoForm, form: FormData): Promise<EstadoFo
     },
   });
   if (error) return { erro: mensagemDeErroAuth(error), valores };
+
+  // Confirmação de e-mail desligada no Supabase (comum em testes): já entra.
+  if (data.session) redirect("/boas-vindas");
 
   return {
     sucesso: `Pronto! Enviamos um link de confirmação para ${r.data.email}. Abra o e-mail para ativar seu teste grátis de 7 dias.`,
