@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
+import { CampoSenha } from "@/components/campo-senha";
 
 /** Botão principal: azul royal, texto branco, área de toque confortável. */
 export function Botao({ className = "", variante = "principal", ...props }: ComponentProps<"button"> & {
@@ -25,6 +26,10 @@ export function Campo({
   ajuda,
   ...props
 }: ComponentProps<"input"> & { rotulo: string; nome: string; erro?: string; ajuda?: string }) {
+  // Senha ganha o botão de olho (mostrar ou esconder o que foi digitado).
+  if (props.type === "password") {
+    return <CampoSenha rotulo={rotulo} nome={nome} erro={erro} ajuda={ajuda} {...props} />;
+  }
   const idErro = erro ? `${nome}-erro` : undefined;
   return (
     <label className="block">
