@@ -885,7 +885,7 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       expect((await comoVisitante("select agenda_publica('clinica-b') as p")).rows[0].p).toBeNull();
       expect((await comoVisitante("select agenda_publica('nao-existe') as p")).rows[0].p).toBeNull();
       const p = (await comoVisitante("select agenda_publica(' Oficina-A ') as p")).rows[0].p;
-      expect(p.empresa).toEqual({ nome: "Oficina A", nicho: "outro", mensagem: null });
+      expect(p.empresa).toEqual({ nome: "Oficina A", nicho: "outro", mensagem: null, logo_versao: null });
       expect(p.horario).toMatchObject({ abertura: "08:00", fechamento: "18:00", dias: [1, 2, 3, 4, 5, 6], dias_adiante: 30, antecedencia_horas: 1, datas_fechadas: [] });
       expect(p.profissionais.map((x: { nome: string }) => x.nome)).toEqual(["Ana", "Bia"]);
       expect(p.servicos).toEqual([{ id: servico, nome: "Corte", duracao_minutos: 30, preco_centavos: 4000 }]);
@@ -1078,6 +1078,89 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       await db.query("update empresas set teste_ate = now() - interval '1 day' where id = $1", [empresaB]);
       const painel = (await como(claimsAdmin(), "select admin_painel() as p")).rows[0].p;
       expect(painel).toMatchObject({ testes_acabando: 1, testes_vencidos: 1 });
+    });
+  });
+  describe("logo da empresa no link de agendamento", () => {
+    const A = claimsDe(ids.donoA);
+    const B = claimsDe(ids.donoB);
+    const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+    const WEBP = "data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==";
+    const SALVAR = "insert into logos_empresa (imagem) values ($1) on conflict (empresa_id) do update set imagem = excluded.imagem";
+
+    it("o dono guarda, troca e apaga a própria logo; só ele (e o admin) lê a tabela", async () => {
+      await como(A, SALVAR, [PNG]);
+      await como(A, SALVAR, [WEBP]);
+      expect((await como(A, "select empresa_id, imagem from logos_empresa")).rows).toEqual([{ empresa_id: empresaA, imagem: WEBP }]);
+      expect((await como(B, "select count(*)::int n from logos_empresa")).rows[0].n).toBe(0);
+      expect((await como(claimsAdmin(), "select count(*)::int n from logos_empresa")).rows[0].n).toBe(1);
+      await expect(comoVisitante("select * from logos_empresa")).rejects.toThrow(/permission denied/);
+      expect((await como(A, "delete from logos_empresa")).rowCount).toBe(1);
+    });
+
+    it("ninguém mexe na logo de outra empresa", async () => {
+      await como(B, SALVAR, [PNG]);
+      await expect(como(A, "insert into logos_empresa (empresa_id, imagem) values ($1, $2)", [empresaB, WEBP])).rejects.toThrow(/row-level security/);
+      expect((await como(A, "update logos_empresa set imagem = $1", [WEBP])).rowCount).toBe(0);
+      expect((await como(A, "delete from logos_empresa")).rowCount).toBe(0);
+      expect((await como(B, "select imagem from logos_empresa")).rows[0].imagem).toBe(PNG);
+    });
+
+    it("só entra PNG, JPEG ou WebP dentro do limite de tamanho", async () => {
+      for (const ruim of [
+        "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=",
+        "https://exemplo.com/logo.png",
+        "data:image/png;base64,",
+        "data:image/png;base64,AAAA\"><script>",
+        `data:image/png;base64,${"A".repeat(300000)}`,
+      ]) {
+        await expect(como(A, SALVAR, [ruim])).rejects.toThrow(/logos_empresa_imagem_check/);
+      }
+    });
+
+    it("o visitante só recebe a logo com o link no ar, e a página avisa quando ela muda", async () => {
+      await como(A, SALVAR, [PNG]);
+      const logo = async () => (await comoVisitante("select logo_publica(' Oficina-A ') as l")).rows[0].l;
+      const versao = async () => (await comoVisitante("select agenda_publica('oficina-a') as p")).rows[0].p?.empresa.logo_versao;
+      // link ainda desligado: nada de logo
+      expect(await logo()).toBeNull();
+      await como(A, "update empresas set agenda_ativa = true, agendamento_online = true where id = $1", [empresaA]);
+      expect(await logo()).toBe(PNG);
+      const v1 = await versao();
+      expect(typeof v1).toBe("number");
+      // trocar a logo muda a versão (o navegador busca a imagem nova)
+      // (o teste roda numa transação só, onde now() não anda: recua a hora da primeira logo)
+      await db.query("alter table logos_empresa disable trigger logos_empresa_atualizado_em");
+      await db.query("update logos_empresa set atualizado_em = now() - interval '1 hour' where empresa_id = $1", [empresaA]);
+      await db.query("alter table logos_empresa enable trigger logos_empresa_atualizado_em");
+      const antiga = await versao();
+      expect(antiga).toBeLessThan(v1);
+      await como(A, SALVAR, [WEBP]);
+      expect(await logo()).toBe(WEBP);
+      expect(await versao()).toBeGreaterThan(antiga);
+      // empresa sem logo e empresa que não existe
+      expect((await comoVisitante("select logo_publica('clinica-b') as l")).rows[0].l).toBeNull();
+      expect((await comoVisitante("select logo_publica('nao-existe') as l")).rows[0].l).toBeNull();
+      // conta bloqueada: o link sai do ar e a logo também
+      await db.query("update empresas set status_assinatura = 'inadimplente' where id = $1", [empresaA]);
+      expect(await logo()).toBeNull();
+    });
+
+    it("conta em somente leitura não troca a logo, mas consegue apagar", async () => {
+      await como(A, SALVAR, [PNG]);
+      await db.query("update empresas set status_assinatura = 'inadimplente' where id = $1", [empresaA]);
+      await expect(como(A, SALVAR, [WEBP])).rejects.toThrow(/row-level security/);
+      expect((await como(A, "select imagem from logos_empresa")).rows[0].imagem).toBe(PNG);
+      expect((await como(A, "delete from logos_empresa")).rowCount).toBe(1);
+    });
+
+    it("troca feita pelo admin em modo suporte fica no log, sem copiar a imagem", async () => {
+      await como(A, SALVAR, [PNG]);
+      const suporte = { "x-modo-suporte": "1", "x-empresa-suporte": empresaA };
+      await como(claimsAdmin(), "update logos_empresa set imagem = $1 where empresa_id = $2", [WEBP, empresaA], suporte);
+      const log = (await db.query("select acao, tabela, empresa_id, valor_anterior, valor_novo from log_admin where tabela = 'logos_empresa'")).rows;
+      expect(log).toEqual([
+        { acao: "update", tabela: "logos_empresa", empresa_id: empresaA, valor_anterior: { empresa_id: empresaA, tamanho: PNG.length }, valor_novo: { empresa_id: empresaA, tamanho: WEBP.length } },
+      ]);
     });
   });
 });
