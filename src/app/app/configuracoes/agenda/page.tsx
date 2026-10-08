@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { ChevronRight, Link2 } from "lucide-react";
 import { Voltar } from "@/components/voltar";
 import { exigirCliente } from "@/lib/sessao";
 import { FormConfigAgenda } from "./form";
@@ -20,6 +22,14 @@ export default async function ConfigAgenda() {
           dias: (data?.dias_funcionamento as number[]) ?? [1, 2, 3, 4, 5, 6],
         }}
       />
+      <Link href="/app/configuracoes/agendamento-online" className="flex min-h-16 items-center gap-3 rounded-cartao bg-white px-5 py-3 shadow-suave hover:bg-cartao">
+        <Link2 className="size-5 text-royal" strokeWidth={1.75} />
+        <span className="flex-1">
+          <span className="block font-medium text-tinta">Link de agendamento</span>
+          <span className="block text-sm text-suave">O cliente marca sozinho, nos dias e horários acima</span>
+        </span>
+        <ChevronRight className="size-5 text-suave" />
+      </Link>
     </div>
   );
 }
