@@ -13,12 +13,14 @@ Asaas (assinatura) · WhatsApp Cloud API (Meta) · Resend (e-mail) · Web Push.
 | Módulo | Onde |
 | --- | --- |
 | Cadastro, login, confirmação de e-mail, recuperação de senha, teste grátis de 7 dias | `src/app/(auth)` |
-| Onboarding em 3 telas com categorias prontas por nicho | `src/app/boas-vindas`, `src/config/nichos.ts` |
+| Onboarding em 4 telas: nome, nicho (categorias prontas) e perguntas opcionais sobre o negócio (o caixa começa zerado) | `src/app/boas-vindas`, `src/config/nichos.ts`, `src/config/perfil-negocio.ts` |
 | Lançamentos em 3 toques, recorrentes e parcelados; contas a pagar/receber | `src/app/app/lancamentos`, `src/app/app/contas` |
 | Dashboard: saldo, entradas, saídas, lucro, gráfico, resultado do mês (DRE simples) | `src/app/app/page.tsx` |
 | Produtos com código e código de barras automáticos, estoque, etiquetas, vendas | `src/app/app/produtos`, `src/app/app/vendas` |
 | Tela "Hoje", lembretes, avisos por e-mail/notificação, cobrança no WhatsApp | `src/app/app/hoje`, `src/app/api/cron/avisos` |
 | Agenda de atendimentos, presença, indicadores | `src/app/app/agenda` |
+| Link público de agendamento por empresa (`/agendar/nome-da-empresa`): o cliente marca sozinho | `src/app/agendar/[slug]`, `src/app/app/configuracoes/agendamento-online`, `src/lib/agendamento-online.ts` |
+| Pedido de contato do time de marketing (no onboarding e no menu) | `src/app/app/marketing` |
 | Mensagens automáticas de confirmação no WhatsApp (régua 5d/2d/1d/dia) | `src/app/app/mensagens`, `src/services/whatsapp` |
 | Relatórios e exportação CSV/PDF | `src/app/app/relatorios` |
 | Assinatura (Asaas), upgrade/downgrade, somente leitura | `src/app/app/assinatura`, `src/services/asaas.ts` |
