@@ -26,6 +26,7 @@ const esquemaVenda = z.object({
   cliente_id: z.uuid().nullable(),
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   observacao: z.string().trim().max(500).nullable(),
+  agendamento_id: z.uuid().nullable().optional(),
 });
 
 const ERROS_BANCO: [RegExp, string][] = [
@@ -47,11 +48,16 @@ export async function registrarVenda(json: string): Promise<EstadoForm> {
   if (r.data.data > hojeIso()) return { erro: "A data da venda não pode ser no futuro." };
 
   const { supabase } = await exigirCliente();
-  const { data: id, error } = await supabase.rpc("registrar_venda", { p_venda: r.data });
+  const { agendamento_id, ...venda } = r.data;
+  const { data: id, error } = await supabase.rpc("registrar_venda", { p_venda: venda });
   if (error) {
     console.error("[vendas]", error);
     const conhecido = ERROS_BANCO.find(([re]) => re.test(error.message));
     return { erro: conhecido?.[1] ?? "Não foi possível registrar a venda. Tente de novo." };
+  }
+  // Liga a venda ao atendimento que a originou.
+  if (agendamento_id) {
+    await supabase.from("agendamentos").update({ venda_id: id }).eq("id", agendamento_id).is("venda_id", null);
   }
   revalidatePath("/app", "layout");
   redirect(`/app/vendas/${id}?nova=1`);

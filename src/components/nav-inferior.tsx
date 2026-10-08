@@ -34,7 +34,8 @@ const ICONES: Record<AcaoRapida["icone"], { icone: LucideIcon; cor: string }> = 
 };
 
 /** Barra inferior do app (mobile first) com o botão "+" no meio. */
-export function NavInferior({ acoes = ACOES_PADRAO }: { acoes?: AcaoRapida[] }) {
+export function NavInferior({ agenda = false }: { agenda?: boolean }) {
+  const acoes = agenda ? [...ACOES_PADRAO, { href: "/app/agenda/novo", rotulo: "Agendar", icone: "agenda" as const }] : ACOES_PADRAO;
   const caminho = usePathname();
   const [aberto, setAberto] = useState(false);
   const ativo = (i: Item) =>

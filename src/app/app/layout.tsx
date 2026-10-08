@@ -34,7 +34,7 @@ export default async function LayoutApp({ children }: LayoutProps<"/app">) {
         </div>
       </header>
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-28 pt-6">{children}</main>
-      <NavInferior />
+      <NavInferior agenda={empresa.agenda_ativa} />
     </div>
   );
 }

@@ -8,8 +8,20 @@ import { Carrinho } from "./carrinho";
 
 export const metadata: Metadata = { title: "Nova venda" };
 
-export default async function NovaVenda() {
+export default async function NovaVenda({ searchParams }: PageProps<"/app/vendas/nova">) {
+  const p = await searchParams;
   const { supabase } = await exigirCliente();
+  const agendamentoId = typeof p.agendamento === "string" && /^[0-9a-f-]{36}$/i.test(p.agendamento) ? p.agendamento : null;
+  const agendamento = agendamentoId
+    ? (
+        await supabase
+          .from("agendamentos")
+          .select("id, cliente_id, servico_id, venda_id")
+          .eq("id", agendamentoId)
+          .is("deleted_at", null)
+          .maybeSingle()
+      ).data
+    : null;
   const [produtos, categorias, servicos, clientes] = await Promise.all([
     listarProdutos(supabase),
     carregarCategorias(supabase),
@@ -43,6 +55,7 @@ export default async function NovaVenda() {
         categoriaPadrao={padrao?.id ?? null}
         clientes={clientes}
         hoje={hojeIso()}
+        agendamento={agendamento && !agendamento.venda_id ? agendamento : null}
       />
     </div>
   );

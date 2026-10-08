@@ -624,4 +624,43 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       expect(Number((await db.query("select estoque from produtos where id = $1", [deB])).rows[0].estoque)).toBe(5);
     });
   });
+
+  describe("agenda e indicadores", () => {
+    it("calcula comparecimento, faltas, receita perdida e retorno", async () => {
+      const A = claimsDe(ids.donoA);
+      const um = async (sql: string, params: unknown[] = []) => (await como(A, sql, params)).rows[0].id as string;
+      const ana = await um("insert into clientes (nome) values ('Ana') returning id");
+      const bia = await um("insert into clientes (nome) values ('Bia') returning id");
+      const prof = await um("insert into profissionais (nome) values ('Carla') returning id");
+      const corte = await um("insert into servicos (nome, preco_centavos, duracao_minutos) values ('Corte', 5000, 30) returning id");
+      const ag = (cliente: string, dia: string, hora: string, status: string) =>
+        como(
+          A,
+          `insert into agendamentos (cliente_id, profissional_id, servico_id, inicio, fim, status)
+           values ($1, $2, $3, ($4 || ' ' || $5 || ' America/Sao_Paulo')::timestamptz,
+                   ($4 || ' ' || $5 || ' America/Sao_Paulo')::timestamptz + interval '30 min', $6)`,
+          [cliente, prof, corte, dia, hora, status],
+        );
+      await ag(ana, "2026-09-02", "09:00", "compareceu");
+      await ag(ana, "2026-09-10", "09:00", "compareceu");
+      await ag(ana, "2026-09-15", "10:00", "faltou");
+      await ag(bia, "2026-09-15", "11:00", "faltou");
+      await ag(bia, "2026-09-16", "11:00", "faltou");
+      await ag(bia, "2026-09-20", "11:00", "cancelado");
+      await ag(bia, "2026-09-20", "11:00", "agendado"); // mesmo horário de um cancelado: pode
+
+      const r = (await como(A, "select indicadores_agenda('2026-09-01', '2026-09-30') as r")).rows[0].r;
+      expect(r.compareceu).toBe(2);
+      expect(r.faltou).toBe(3);
+      expect(r.receita_perdida).toBe(15000);
+      expect(r.total).toBe(6); // cancelado fora
+      expect(r.minutos_ocupados).toBe(180);
+      expect(r.faltas_por_cliente).toEqual([
+        { cliente: "Bia", faltas: 2 },
+        { cliente: "Ana", faltas: 1 },
+      ]);
+      expect(r.clientes_atendidos_90d).toBe(1);
+      expect(r.clientes_que_voltaram_90d).toBe(1);
+    });
+  });
 });

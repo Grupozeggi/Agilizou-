@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeftRight, Boxes, CalendarClock, Settings, ShoppingCart, Tags, Wrench, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, Contact, Users, ArrowLeftRight, Boxes, CalendarClock, Settings, ShoppingCart, Tags, Wrench, type LucideIcon } from "lucide-react";
+import { termosDoNicho } from "@/config/nichos";
 import { exigirCliente } from "@/lib/sessao";
 
 export const metadata: Metadata = { title: "Menu" };
@@ -8,7 +9,9 @@ export const metadata: Metadata = { title: "Menu" };
 type Item = { href: string; rotulo: string; icone: LucideIcon; descricao: string };
 
 export default async function Menu() {
-  await exigirCliente();
+  const { empresa } = await exigirCliente();
+  const t = termosDoNicho(empresa.nicho);
+  const maiusc = (x: string) => x[0].toUpperCase() + x.slice(1);
   const grupos: { titulo: string; itens: Item[] }[] = [
     {
       titulo: "Dinheiro",
@@ -17,18 +20,32 @@ export default async function Menu() {
         { href: "/app/contas", rotulo: "Contas", icone: CalendarClock, descricao: "A pagar e a receber" },
       ],
     },
+    ...(empresa.agenda_ativa
+      ? [
+          {
+            titulo: "Atendimentos",
+            itens: [
+              { href: "/app/agenda", rotulo: "Agenda", icone: CalendarDays, descricao: "Dia, semana e presença" },
+              { href: "/app/profissionais", rotulo: maiusc(t.profissionais), icone: Users, descricao: "Quem atende" },
+              { href: "/app/agenda/indicadores", rotulo: "Indicadores", icone: BarChart3, descricao: "Comparecimento, faltas e horas vagas" },
+            ],
+          },
+        ]
+      : []),
     {
       titulo: "Vendas e estoque",
       itens: [
         { href: "/app/vendas", rotulo: "Vendas", icone: ShoppingCart, descricao: "Histórico com lucro de cada venda" },
         { href: "/app/produtos", rotulo: "Produtos e estoque", icone: Boxes, descricao: "Cadastro, estoque baixo e etiquetas" },
         { href: "/app/servicos", rotulo: "Serviços", icone: Wrench, descricao: "Preço e duração" },
+        { href: "/app/clientes", rotulo: maiusc(t.clientes), icone: Contact, descricao: "Cadastro, WhatsApp e histórico" },
       ],
     },
     {
       titulo: "Ajustes",
       itens: [
         { href: "/app/configuracoes/categorias", rotulo: "Categorias", icone: Tags, descricao: "Nomes das entradas e saídas" },
+        { href: "/app/configuracoes/agenda", rotulo: "Agenda", icone: CalendarDays, descricao: empresa.agenda_ativa ? "Ligada · horário de atendimento" : "Desligada · toque para ligar" },
         { href: "/app/configuracoes", rotulo: "Ajustes e assinatura", icone: Settings, descricao: "Conta, plano e sair" },
       ],
     },

@@ -2,12 +2,13 @@ import type { ComponentProps, ReactNode } from "react";
 
 /** Botão principal: azul royal, texto branco, área de toque confortável. */
 export function Botao({ className = "", variante = "principal", ...props }: ComponentProps<"button"> & {
-  variante?: "principal" | "secundario" | "perigo";
+  variante?: "principal" | "secundario" | "perigo" | "sucesso";
 }) {
   const estilos = {
     principal: "bg-royal-vivo text-white hover:bg-royal disabled:bg-royal-vivo/60",
     secundario: "bg-white text-royal border border-borda hover:bg-cartao",
     perigo: "bg-saida text-white hover:bg-saida/90 disabled:bg-saida/60",
+    sucesso: "bg-entrada text-white hover:bg-entrada/90 disabled:bg-entrada/60",
   }[variante];
   return (
     <button

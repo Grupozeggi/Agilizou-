@@ -43,7 +43,9 @@ export function Carrinho({
   categoriaPadrao,
   clientes,
   hoje,
+  agendamento,
 }: {
+  agendamento?: { id: string; cliente_id: string; servico_id: string | null } | null;
   produtos: Produto[];
   servicos: Servico[];
   categorias: { id: string; nome: string }[];
@@ -51,13 +53,27 @@ export function Carrinho({
   clientes: { id: string; nome: string }[];
   hoje: string;
 }) {
-  const [itens, setItens] = useState<Item[]>([]);
+  const servicoDoAtendimento = servicos.find((x) => x.id === agendamento?.servico_id);
+  const [itens, setItens] = useState<Item[]>(() =>
+    servicoDoAtendimento
+      ? [
+          {
+            chave: `${servicoDoAtendimento.id}-0`,
+            servico_id: servicoDoAtendimento.id,
+            descricao: servicoDoAtendimento.nome,
+            quantidade: 1,
+            preco_unitario_centavos: servicoDoAtendimento.preco_centavos,
+            custo_unitario_centavos: servicoDoAtendimento.custo_centavos,
+          },
+        ]
+      : [],
+  );
   const [busca, setBusca] = useState("");
   const [aviso, setAviso] = useState<string>();
   const [desconto, setDesconto] = useState(0);
   const [forma, setForma] = useState<FormaPagamento>("pix");
   const [categoria, setCategoria] = useState(categoriaPadrao);
-  const [cliente, setCliente] = useState("");
+  const [cliente, setCliente] = useState(agendamento?.cliente_id ?? "");
   const [avulso, setAvulso] = useState(false);
   const [erro, setErro] = useState<string>();
   const [salvando, iniciar] = useTransition();
@@ -129,6 +145,7 @@ export function Carrinho({
       cliente_id: cliente || null,
       data: hoje,
       observacao: null,
+      agendamento_id: agendamento?.id ?? null,
     };
     iniciar(async () => {
       try {
@@ -143,6 +160,7 @@ export function Carrinho({
 
   return (
     <div className="space-y-4">
+      {agendamento && <Aviso tipo="info">Venda do atendimento: cliente e serviço já preenchidos. Confira e finalize.</Aviso>}
       <div className="relative">
         <LeitorCodigo
           autoFocus
