@@ -8,6 +8,8 @@ import { Cartao } from "@/components/ui";
 import { termosDoNicho } from "@/config/nichos";
 import type { AgendaPublica } from "@/lib/agendamento-online";
 import { hojeIso } from "@/lib/datas";
+import { urlDoSite } from "@/lib/env";
+import { caminhoDaLogo } from "@/lib/logo";
 import { criarClientePublico } from "@/lib/supabase/publico";
 import { FormAgendar } from "./form";
 
@@ -29,9 +31,15 @@ export async function generateMetadata({ params }: PageProps<"/agendar/[slug]">)
   const { slug } = await params;
   const agenda = await carregar(slug.toLowerCase());
   if (!agenda) return { title: "Agendamento", robots: { index: false } };
+  const descricao = `Escolha o dia e o horário e marque seu atendimento em ${agenda.empresa.nome}.`;
+  const versao = agenda.empresa.logo_versao;
   return {
     title: `Agendar em ${agenda.empresa.nome}`,
-    description: `Escolha o dia e o horário e marque seu atendimento em ${agenda.empresa.nome}.`,
+    description: descricao,
+    // Com logo, ela aparece na prévia do link (WhatsApp, redes sociais).
+    openGraph: versao
+      ? { title: `Agendar em ${agenda.empresa.nome}`, description: descricao, images: [`${urlDoSite()}${caminhoDaLogo(slug.toLowerCase(), versao)}`] }
+      : undefined,
   };
 }
 
@@ -47,9 +55,21 @@ export default async function Agendar({ params }: PageProps<"/agendar/[slug]">) 
         {agenda ? (
           <>
             <header className="mb-5 flex items-center gap-3">
-              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-royal text-xl font-bold text-white" aria-hidden="true">
-                {agenda.empresa.nome.trim().charAt(0).toUpperCase()}
-              </span>
+              {agenda.empresa.logo_versao ? (
+                // Imagem entregue pela rota /agendar/<empresa>/logo (não passa pelo otimizador do Next).
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={caminhoDaLogo(slug.toLowerCase(), agenda.empresa.logo_versao)}
+                  alt={`Logo de ${agenda.empresa.nome}`}
+                  width={64}
+                  height={64}
+                  className="size-16 shrink-0 rounded-2xl border border-borda bg-white object-contain"
+                />
+              ) : (
+                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-royal text-xl font-bold text-white" aria-hidden="true">
+                  {agenda.empresa.nome.trim().charAt(0).toUpperCase()}
+                </span>
+              )}
               <div className="min-w-0">
                 <h1 className="break-words text-xl leading-tight">{agenda.empresa.nome}</h1>
                 <p className="text-sm text-suave">Agende seu horário</p>
