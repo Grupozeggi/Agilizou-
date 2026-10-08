@@ -3,7 +3,7 @@ import { BadgeCheck } from "lucide-react";
 import { Voltar } from "@/components/voltar";
 import { Cartao } from "@/components/ui";
 import { PLANOS } from "@/config/planos";
-import { formatarData } from "@/lib/datas";
+import { dataSp, formatarData } from "@/lib/datas";
 import { formatarReais } from "@/lib/dinheiro";
 import { exigirCliente } from "@/lib/sessao";
 
@@ -31,7 +31,7 @@ export default async function Assinatura() {
         <p className="text-sm text-suave">Situação</p>
         <p className="text-lg font-semibold text-tinta">{STATUS[empresa.status_assinatura]}</p>
         {empresa.status_assinatura === "teste" && (
-          <p className="text-sm text-suave">Seu teste vai até {formatarData(empresa.teste_ate.slice(0, 10))}.</p>
+          <p className="text-sm text-suave">Seu teste vai até {formatarData(dataSp(empresa.teste_ate))}.</p>
         )}
       </Cartao>
       {Object.values(PLANOS).map((p) => (

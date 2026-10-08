@@ -515,4 +515,113 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       expect(r.entradas).toBe(15000); // só o lançamento da própria empresa B
     });
   });
+
+  describe("estoque e vendas", () => {
+    const A = () => claimsDe(ids.donoA);
+    const produto = async (nome: string, custo: number, preco: number, estoque: number) =>
+      (
+        await como(
+          A(),
+          "insert into produtos (nome, custo_centavos, preco_centavos, estoque) values ($1, $2, $3, $4) returning id",
+          [nome, custo, preco, estoque],
+        )
+      ).rows[0].id as string;
+    const estoque = async (id: string) => Number((await db.query("select estoque from produtos where id = $1", [id])).rows[0].estoque);
+
+    it("estoque inicial vira movimentação e não pode ser alterado direto", async () => {
+      const p = await produto("Óleo", 2000, 3500, 10);
+      const m = await db.query("select tipo, quantidade::float as q from movimentacoes_estoque where produto_id = $1", [p]);
+      expect(m.rows).toEqual([{ tipo: "ajuste", q: 10 }]);
+      await expect(como(A(), "update produtos set estoque = 99 where id = $1", [p])).rejects.toThrow(/registre uma entrada/);
+      // outros campos continuam editáveis
+      await como(A(), "update produtos set preco_centavos = 3900 where id = $1", [p]);
+    });
+
+    it("entrada, perda e ajuste mudam o estoque e registram o histórico", async () => {
+      const p = await produto("Filtro", 1000, 2500, 5);
+      await como(A(), "select movimentar_estoque($1, 'entrada', 10, 1200)", [p]);
+      expect(await estoque(p)).toBe(15);
+      expect(Number((await db.query("select custo_centavos from produtos where id = $1", [p])).rows[0].custo_centavos)).toBe(1200);
+      await como(A(), "select movimentar_estoque($1, 'perda', 2)", [p]);
+      expect(await estoque(p)).toBe(13);
+      await como(A(), "select movimentar_estoque($1, 'ajuste', 20)", [p]); // contou 20
+      expect(await estoque(p)).toBe(20);
+      const soma = await db.query("select sum(quantidade)::float as s from movimentacoes_estoque where produto_id = $1", [p]);
+      expect(soma.rows[0].s).toBe(20); // histórico explica o estoque
+      await expect(como(A(), "select movimentar_estoque($1, 'perda', -1)", [p])).rejects.toThrow(/Quantidade inválida/);
+    });
+
+    it("compra paga lança a saída no caixa", async () => {
+      const p = await produto("Pastilha", 0, 9000, 0);
+      await como(A(), "select movimentar_estoque($1, 'entrada', 4, 4550, true, null, 'pix')", [p]);
+      const l = await db.query("select tipo, valor_centavos::int as v, descricao from lancamentos where empresa_id = $1", [empresaA]);
+      expect(l.rows).toEqual([{ tipo: "saida", v: 18200, descricao: "Compra: Pastilha" }]);
+    });
+
+    it("venda dá baixa no estoque, registra custo e gera a entrada no caixa", async () => {
+      const p1 = await produto("Óleo 5W30", 2000, 3500, 10);
+      const p2 = await produto("Arruela", 13, 50, 100);
+      const servico = (
+        await como(A(), "insert into servicos (nome, preco_centavos, custo_centavos) values ('Troca de óleo', 8000, 0) returning id")
+      ).rows[0].id;
+      const venda = {
+        forma_pagamento: "pix",
+        desconto_centavos: 500,
+        itens: [
+          { produto_id: p1, quantidade: 4, preco_unitario_centavos: 3500 }, // 140,00 custo 80,00
+          { produto_id: p2, quantidade: 1.5, preco_unitario_centavos: 33 }, // 49,5 → 0,50; custo 19,5 → 0,20
+          { servico_id: servico, quantidade: 1, preco_unitario_centavos: 8000 }, // 80,00
+          { descricao: "Mão de obra extra", quantidade: 1, preco_unitario_centavos: 2000 },
+        ],
+      };
+      const id = (await como(A(), "select registrar_venda($1::jsonb) as id", [JSON.stringify(venda)])).rows[0].id;
+
+      const v = (
+        await db.query(
+          "select numero::int, subtotal_centavos::int s, desconto_centavos::int d, total_centavos::int t, custo_total_centavos::int c from vendas where id = $1",
+          [id],
+        )
+      ).rows[0];
+      expect(v).toEqual({ numero: 1, s: 24050, d: 500, t: 23550, c: 8020 });
+      expect(v.t - v.c).toBe(15530); // lucro da venda R$ 155,30
+
+      expect(await estoque(p1)).toBe(6);
+      expect(await estoque(p2)).toBe(98.5);
+      const l = await db.query("select tipo, valor_centavos::int v, descricao, status from lancamentos where venda_id = $1", [id]);
+      expect(l.rows).toEqual([{ tipo: "entrada", v: 23550, descricao: "Venda #1", status: "pago" }]);
+    });
+
+    it("venda não pode ser editada; cancelar devolve o estoque e tira do caixa", async () => {
+      const p = await produto("Óleo", 2000, 3500, 10);
+      const id = (
+        await como(A(), "select registrar_venda($1::jsonb) as id", [
+          JSON.stringify({ itens: [{ produto_id: p, quantidade: 3, preco_unitario_centavos: 3500 }] }),
+        ])
+      ).rows[0].id;
+      await expect(como(A(), "update vendas set total_centavos = 1 where id = $1", [id])).rejects.toThrow(/não pode ser alterada/);
+      await como(A(), "select cancelar_venda($1)", [id]);
+      expect(await estoque(p)).toBe(10);
+      const l = await db.query("select count(*)::int n from lancamentos where venda_id = $1 and deleted_at is null", [id]);
+      expect(l.rows[0].n).toBe(0);
+    });
+
+    it("recusa venda vazia, desconto maior que o total e produto de outra empresa", async () => {
+      await expect(como(A(), `select registrar_venda('{"itens": []}'::jsonb)`)).rejects.toThrow(/pelo menos um item/);
+      const p = await produto("Óleo", 2000, 3500, 10);
+      await expect(
+        como(A(), "select registrar_venda($1::jsonb)", [
+          JSON.stringify({ desconto_centavos: 5000, itens: [{ produto_id: p, quantidade: 1, preco_unitario_centavos: 3500 }] }),
+        ]),
+      ).rejects.toThrow(/Desconto maior/);
+      const deB = (
+        await como(claimsDe(ids.donoB), "insert into produtos (nome, estoque) values ('Resina', 5) returning id")
+      ).rows[0].id;
+      await expect(
+        como(A(), "select registrar_venda($1::jsonb)", [
+          JSON.stringify({ itens: [{ produto_id: deB, quantidade: 1, preco_unitario_centavos: 100 }] }),
+        ]),
+      ).rejects.toThrow(/Produto não encontrado/);
+      expect(Number((await db.query("select estoque from produtos where id = $1", [deB])).rows[0].estoque)).toBe(5);
+    });
+  });
 });

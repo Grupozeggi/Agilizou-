@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { Voltar } from "@/components/voltar";
 import { hojeIso } from "@/lib/datas";
@@ -18,14 +18,16 @@ export default async function EditarLancamento({ params }: PageProps<"/app/lanca
     supabase
       .from("lancamentos")
       .select(
-        "id, tipo, valor_centavos, categoria_id, data, status, forma_pagamento, descricao, observacao, grupo_id, parcela_numero, parcela_total, recorrente",
+        "id, tipo, valor_centavos, categoria_id, data, status, forma_pagamento, descricao, observacao, grupo_id, parcela_numero, parcela_total, recorrente, venda_id",
       )
       .eq("id", id)
       .is("deleted_at", null)
-      .maybeSingle<LancamentoEditavel>(),
+      .maybeSingle<LancamentoEditavel & { venda_id: string | null }>(),
     carregarCategorias(supabase),
   ]);
   if (!lancamento) notFound();
+  // Entrada gerada por venda é editada pela própria venda (cancelar e lançar de novo).
+  if (lancamento.venda_id) redirect(`/app/vendas/${lancamento.venda_id}`);
 
   // Categoria removida depois do lançamento continua aparecendo para ele.
   if (lancamento.categoria_id && !categorias.some((c) => c.id === lancamento.categoria_id)) {

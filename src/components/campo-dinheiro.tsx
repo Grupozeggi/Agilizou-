@@ -15,6 +15,7 @@ export function CampoDinheiro({
   ajuda,
   permitirNegativo = false,
   autoFocus,
+  onValor,
 }: {
   nome: string;
   rotulo: string;
@@ -23,6 +24,8 @@ export function CampoDinheiro({
   ajuda?: string;
   permitirNegativo?: boolean;
   autoFocus?: boolean;
+  /** Avisa o novo valor em centavos a cada alteração. */
+  onValor?: (centavos: number) => void;
 }) {
   const [centavos, setCentavos] = useState(Math.abs(valorInicialCentavos));
   const [negativo, setNegativo] = useState(valorInicialCentavos < 0);
@@ -65,6 +68,7 @@ export function CampoDinheiro({
             }
             digitos = digitos.replace(/^0+/, "").slice(0, 13);
             setCentavos(Number(digitos || "0"));
+            onValor?.(Number(digitos || "0"));
           }}
           onFocus={(e) => moverCursorParaFim(e.currentTarget)}
           onClick={(e) => moverCursorParaFim(e.currentTarget)}

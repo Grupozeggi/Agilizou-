@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronRight, Sparkles } from "lucide-react";
 import { GraficoEntradasSaidas } from "@/components/grafico-barras";
 import { Cartao } from "@/components/ui";
-import { diasEntre, formatarData } from "@/lib/datas";
+import { dataSp, diasEntre, formatarData } from "@/lib/datas";
 import { formatarReais, percentual } from "@/lib/dinheiro";
 import { resolverPeriodo, type TipoPeriodo } from "@/lib/periodo";
 import { carregarResumo, lucro } from "@/lib/resumo";
@@ -33,7 +33,7 @@ export default async function Inicio({ searchParams }: PageProps<"/app">) {
   const r = await carregarResumo(supabase, periodo.inicio, periodo.fim);
   const resultado = lucro(r);
   const margem = percentual(resultado, r.receitas);
-  const fimTeste = empresa.teste_ate.slice(0, 10);
+  const fimTeste = dataSp(empresa.teste_ate);
   const diasTeste = Math.max(0, diasEntre(hoje, fimTeste));
   const alertasPagar = r.pagar_vencidas.qtd + r.pagar_7dias.qtd;
   const alertasReceber = r.receber_vencidas.qtd + r.receber_7dias.qtd;
@@ -168,7 +168,8 @@ export default async function Inicio({ searchParams }: PageProps<"/app">) {
         </dl>
         {margem !== null && (
           <p className="mt-2 text-xs text-suave">
-            De cada R$ 100 que entraram, sobraram R$ {margem.toLocaleString("pt-BR", { minimumFractionDigits: 1 })}.
+            De cada R$ 100 que entraram, {margem >= 0 ? "sobraram" : "faltaram"} R${" "}
+            {Math.abs(margem).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}.
           </p>
         )}
         {(r.a_receber_periodo > 0 || r.a_pagar_periodo > 0) && (

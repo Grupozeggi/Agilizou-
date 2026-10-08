@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diasEntre, formatarData, hojeIso, paraIso, somarDias } from "./datas";
+import { dataSp, diasEntre, formatarData, hojeIso, paraIso, somarDias } from "./datas";
 
 describe("datas", () => {
   it("formata e converte dd/mm/aaaa", () => {
@@ -20,5 +20,12 @@ describe("datas", () => {
   it("soma dias atravessando mês e ano", () => {
     expect(somarDias("2026-12-30", 3)).toBe("2027-01-02");
     expect(diasEntre("2026-10-08", "2026-10-15")).toBe(7);
+  });
+});
+
+describe("dataSp", () => {
+  it("converte timestamptz para a data de São Paulo", () => {
+    expect(dataSp("2026-10-15T02:44:00+00:00")).toBe("2026-10-14");
+    expect(dataSp("2026-10-15T12:00:00Z")).toBe("2026-10-15");
   });
 });

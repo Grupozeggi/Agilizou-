@@ -37,3 +37,8 @@ export function somarDias(iso: string, dias: number): string {
 export function diasEntre(a: string, b: string): number {
   return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 }
+
+/** Data (aaaa-mm-dd) em São Paulo de um instante ISO (ex.: timestamptz do banco). */
+export function dataSp(instante: string): string {
+  return hojeIso(new Date(instante));
+}

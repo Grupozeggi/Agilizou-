@@ -40,3 +40,17 @@ export async function usoLancamentos(supabase: Supabase, empresa: Empresa): Prom
   if (error) throw new Error("Não foi possível verificar o limite do plano.");
   return montar(empresa, "lancamentosPorMes", Number(data ?? 0));
 }
+
+/** Uso de limites de cadastro (produtos, clientes, profissionais ativos). */
+export async function usoCadastro(
+  supabase: Supabase,
+  empresa: Empresa,
+  tabela: "produtos" | "clientes" | "profissionais",
+): Promise<UsoLimite> {
+  const { count, error } = await supabase
+    .from(tabela)
+    .select("id", { count: "exact", head: true })
+    .is("deleted_at", null);
+  if (error) throw new Error("Não foi possível verificar o limite do plano.");
+  return montar(empresa, tabela, count ?? 0);
+}

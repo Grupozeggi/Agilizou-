@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  modulosCode128,
+  modulosCodigo,
   codigoBarrasInterno,
   digitoGtin,
   ehCodigoInterno,
@@ -88,5 +90,28 @@ describe("desenho EAN", () => {
 
   it("código alfanumérico não é desenhado como EAN", () => {
     expect(modulosEan("PEC-0042")).toBeNull();
+  });
+});
+
+describe("Code 128", () => {
+  it("codifica com início B, dígito de controle e parada", () => {
+    // "PEC-0042": 8 caracteres → (1 início + 8 + 1 controle) × 11 módulos + parada 13
+    const m = modulosCode128("PEC-0042")!;
+    expect(m).toHaveLength(10 * 11 + 13);
+    expect(m.startsWith("11010010000")).toBe(true); // Start B
+    expect(m.endsWith("1100011101011")).toBe(true); // Stop
+  });
+
+  it("dígito de controle calculado à mão para 'A'", () => {
+    // Start B = 104, 'A' = 33 → (104 + 33×1) mod 103 = 34
+    const m = modulosCode128("A")!;
+    expect(m.slice(11, 22)).toBe("10100011000"); // símbolo 33 ('A')
+    expect(m.slice(22, 33)).toBe("10001011000"); // símbolo 34 (controle)
+  });
+
+  it("escolhe EAN quando dá e Code 128 para o resto", () => {
+    expect(modulosCodigo("4006381333931")?.tipo).toBe("ean");
+    expect(modulosCodigo("PEC-0042")?.tipo).toBe("code128");
+    expect(modulosCodigo("ção")).toBeNull();
   });
 });

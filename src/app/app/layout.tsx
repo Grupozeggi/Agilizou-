@@ -13,7 +13,7 @@ export default async function LayoutApp({ children }: LayoutProps<"/app">) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-cartao">
-      <header className="sticky top-0 z-10 border-b border-borda bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-borda bg-white/90 backdrop-blur print:hidden">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
           <Link href="/app" aria-label="Início">
             <Logo className="text-xl" />
