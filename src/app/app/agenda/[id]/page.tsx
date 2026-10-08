@@ -33,7 +33,10 @@ export default async function DetalheAtendimento({ params }: PageProps<"/app/age
     <div className="space-y-4">
       <Voltar href={`/app/agenda?dia=${data}`}>Agenda</Voltar>
       <div>
-        <p className="text-sm text-suave">{STATUS_AGENDA[a.status]}</p>
+        <p className="text-sm text-suave">
+          {STATUS_AGENDA[a.status]}
+          {a.origem === "link" && " · marcado pelo link de agendamento"}
+        </p>
         <h1 className="text-2xl">{a.cliente?.nome}</h1>
       </div>
       <Cartao className="space-y-1 p-4 text-sm">
