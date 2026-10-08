@@ -97,13 +97,13 @@ Pagamento (Asaas), WhatsApp e e-mails ficam em modo simulado até você configur
 1. Importe o repositório; framework Next.js (detectado).
 2. Cadastre as variáveis de `.env.example` em **Settings → Environment Variables**.
 3. Domínio: adicione `agilizou.app` em **Settings → Domains**.
-4. Tarefas agendadas (`vercel.json`):
-   - `/api/cron/avisos` todo dia às 8h de Brasília (avisos de vencimento; também encerra
-     assinaturas canceladas cujo período pago acabou);
-   - `/api/cron/whatsapp` a cada 10 minutos (fila de mensagens).
-   A Vercel envia `Authorization: Bearer $CRON_SECRET` automaticamente. Intervalos menores que
-   1 vez por dia exigem o plano Pro da Vercel. Alternativa grátis: agendar pelo próprio Supabase
-   (extensões `pg_cron` e `pg_net`):
+4. Tarefas agendadas:
+   - `/api/cron/avisos` todo dia às 8h de Brasília, pela Vercel (`vercel.json`). Avisa vencimentos e
+     também encerra assinaturas canceladas cujo período pago acabou.
+   - `/api/cron/whatsapp` a cada 10 minutos (fila de mensagens). Ela **não** fica no `vercel.json`,
+     porque o plano grátis da Vercel só aceita tarefas 1 vez por dia, e o deploy falharia.
+     Agende pelo próprio Supabase, com as extensões `pg_cron` e `pg_net`
+     (Database → Extensions):
    ```sql
    select cron.schedule('agilizou-whatsapp', '*/10 * * * *', $$
      select net.http_get('https://agilizou.app/api/cron/whatsapp',
