@@ -7,7 +7,8 @@ import { horariosLivres, instanteSp, paraMinutos, partesSp } from "./agenda";
 import { somarDias } from "./datas";
 
 export type AgendaPublica = {
-  empresa: { nome: string; nicho: string; mensagem: string | null };
+  /** `logo_versao`: hora da última troca da logo; null quando a empresa não tem logo. */
+  empresa: { nome: string; nicho: string; mensagem: string | null; logo_versao: number | null };
   horario: {
     abertura: string;
     fechamento: string;
