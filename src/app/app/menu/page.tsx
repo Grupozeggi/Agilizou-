@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BarChart3, CalendarDays, Contact, Users, ArrowLeftRight, Boxes, CalendarClock, Settings, ShoppingCart, Tags, Wrench, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarDays, Contact, MessageCircle, Users, ArrowLeftRight, Boxes, CalendarClock, Settings, ShoppingCart, Tags, Wrench, type LucideIcon } from "lucide-react";
 import { termosDoNicho } from "@/config/nichos";
 import { exigirCliente } from "@/lib/sessao";
 
@@ -28,6 +28,7 @@ export default async function Menu() {
               { href: "/app/agenda", rotulo: "Agenda", icone: CalendarDays, descricao: "Dia, semana e presença" },
               { href: "/app/profissionais", rotulo: maiusc(t.profissionais), icone: Users, descricao: "Quem atende" },
               { href: "/app/agenda/indicadores", rotulo: "Indicadores", icone: BarChart3, descricao: "Comparecimento, faltas e horas vagas" },
+              { href: "/app/mensagens", rotulo: "Mensagens automáticas", icone: MessageCircle, descricao: "Lembretes de horário no WhatsApp" },
             ],
           },
         ]

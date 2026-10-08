@@ -663,4 +663,41 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       expect(r.clientes_que_voltaram_90d).toBe(1);
     });
   });
+
+  describe("WhatsApp: segurança da fila", () => {
+    it("cliente não lê, não escreve e não cancela mensagens de outra empresa", async () => {
+      const A = claimsDe(ids.donoA);
+      const um = async (sql: string) => (await como(A, sql)).rows[0].id as string;
+      const cli = await um("insert into clientes (nome, whatsapp) values ('Ana', '5511999998888') returning id");
+      const prof = await um("insert into profissionais (nome) values ('Carla') returning id");
+      const ag = await um(
+        `insert into agendamentos (cliente_id, profissional_id, inicio, fim) values ('${cli}', '${prof}', now() + interval '3 days', now() + interval '3 days 30 min') returning id`,
+      );
+      await comoServidor(
+        `insert into mensagens_whatsapp (empresa_id, agendamento_id, cliente_id, etapa, telefone, conteudo, agendado_para)
+         values ($1, $2, $3, '1d', '5511999998888', 'Oi', now() + interval '2 days')`,
+        [empresaA, ag, cli],
+      );
+
+      // B não vê, não insere e não cancela
+      const v = await como(claimsDe(ids.donoB), "select count(*)::int n from mensagens_whatsapp");
+      expect(v.rows[0].n).toBe(0);
+      await expect(
+        como(claimsDe(ids.donoB), "select cancelar_mensagens_agendamento($1)", [ag]),
+      ).rejects.toThrow(/não encontrado/);
+      await expect(
+        como(A, `insert into mensagens_whatsapp (empresa_id, etapa, telefone, conteudo, agendado_para) values ($1, 'x', '1', 'x', now())`, [empresaA]),
+      ).rejects.toThrow(/row-level security/);
+      await expect(como(A, "select * from pegar_mensagens_para_envio(10)")).rejects.toThrow(/permission denied/);
+
+      // o dono cancela as próprias; confirmar mantém só a do dia
+      const n = await como(A, "select cancelar_mensagens_agendamento($1, true) as n", [ag]);
+      expect(n.rows[0].n).toBe(1);
+    });
+
+    it("eh_servidor() é falso para cliente mesmo dentro de função security definer", async () => {
+      const r = await como(claimsDe(ids.donoA), "select eh_servidor() as s");
+      expect(r.rows[0].s).toBe(false);
+    });
+  });
 });

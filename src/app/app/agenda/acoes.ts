@@ -77,8 +77,9 @@ export async function mudarStatus(id: string, status: (typeof STATUS)[number]): 
     return { erro: "Não foi possível atualizar." };
   }
   // Cancelado ou atendido: mensagens pendentes deixam de ser enviadas.
-  if (status !== "agendado" && status !== "confirmado") {
-    await supabase.rpc("cancelar_mensagens_agendamento", { p_agendamento: id });
+  // Confirmado: não pergunta de novo, só mantém o lembrete do dia.
+  if (status !== "agendado") {
+    await supabase.rpc("cancelar_mensagens_agendamento", { p_agendamento: id, p_so_confirmacoes: status === "confirmado" });
   }
   revalidar();
   return { sucesso: status };
