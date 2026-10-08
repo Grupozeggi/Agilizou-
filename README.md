@@ -19,7 +19,7 @@ Asaas (assinatura) · WhatsApp Cloud API (Meta) · Resend (e-mail) · Web Push.
 | Produtos com código e código de barras automáticos, estoque, etiquetas, vendas | `src/app/app/produtos`, `src/app/app/vendas` |
 | Tela "Hoje", lembretes, avisos por e-mail/notificação, cobrança no WhatsApp | `src/app/app/hoje`, `src/app/api/cron/avisos` |
 | Agenda de atendimentos, presença, indicadores | `src/app/app/agenda` |
-| Link público de agendamento por empresa (`/agendar/nome-da-empresa`): o cliente marca sozinho | `src/app/agendar/[slug]`, `src/app/app/configuracoes/agendamento-online`, `src/lib/agendamento-online.ts` |
+| Link público de agendamento por empresa (`/agendar/nome-da-empresa`): o cliente marca sozinho; a empresa pode enviar a própria logo | `src/app/agendar/[slug]`, `src/app/app/configuracoes/agendamento-online`, `src/lib/agendamento-online.ts`, `src/lib/logo.ts` |
 | Pedido de contato do time de marketing (no onboarding e no menu) | `src/app/app/marketing` |
 | Mensagens automáticas de confirmação no WhatsApp (régua 5d/2d/1d/dia) | `src/app/app/mensagens`, `src/services/whatsapp` |
 | Relatórios e exportação CSV/PDF | `src/app/app/relatorios` |
