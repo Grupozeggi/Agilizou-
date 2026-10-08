@@ -1,0 +1,13 @@
+<!-- Supabase → Authentication → Email Templates → Confirm signup
+     Assunto: Confirme seu e-mail no Agilizou -->
+<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;color:#1f2a44">
+  <h1 style="color:#1E40AF;font-size:24px">Agilizou<span style="color:#C9A24B">^</span></h1>
+  <p>Oi! Falta só um passo para começar seu teste grátis de 7 dias.</p>
+  <p>
+    <a href="{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=email&proximo=/app"
+       style="display:inline-block;background:#2F5BEA;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold">
+      Confirmar meu e-mail
+    </a>
+  </p>
+  <p style="color:#5b6785;font-size:13px">Se você não criou uma conta no Agilizou, é só ignorar este e-mail.</p>
+</div>

@@ -1,0 +1,13 @@
+<!-- Supabase → Authentication → Email Templates → Reset password
+     Assunto: Crie uma nova senha no Agilizou -->
+<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;color:#1f2a44">
+  <h1 style="color:#1E40AF;font-size:24px">Agilizou<span style="color:#C9A24B">^</span></h1>
+  <p>Recebemos um pedido para trocar a senha da sua conta.</p>
+  <p>
+    <a href="{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=recovery&proximo=/redefinir-senha"
+       style="display:inline-block;background:#2F5BEA;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold">
+      Criar nova senha
+    </a>
+  </p>
+  <p style="color:#5b6785;font-size:13px">O link vale por 1 hora. Se não foi você, ignore este e-mail: sua senha continua a mesma.</p>
+</div>

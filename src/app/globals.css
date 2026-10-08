@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/*
+ * Paleta Agilizou. Use sempre os nomes do tema (bg-royal, text-tinta,
+ * text-entrada...) em vez de cores soltas.
+ *  - royal: cor principal (#1E40AF), royal-vivo para botões (#2F5BEA),
+ *    royal-escuro para textos fortes (#0B2A6F)
+ *  - dourado: SÓ detalhes (ícones, selo Profissional, linhas finas)
+ *  - entrada/saida: SÓ em valores e gráficos
+ */
+@theme {
+  --color-royal: #1e40af;
+  --color-royal-vivo: #2f5bea;
+  --color-royal-escuro: #0b2a6f;
+  --color-royal-claro: #e8eefe;
+  --color-dourado: #c9a24b;
+  --color-fundo: #ffffff;
+  --color-cartao: #f5f7fb;
+  --color-borda: #e3e8f2;
+  --color-tinta: #0b2a6f;
+  --color-texto: #1f2a44;
+  --color-suave: #5b6785;
+  --color-entrada: #16a34a;
+  --color-saida: #dc2626;
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-cartao: 1rem;
+  --shadow-suave: 0 1px 2px rgb(11 42 111 / 0.04), 0 4px 16px rgb(11 42 111 / 0.06);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--color-fundo);
+    color: var(--color-texto);
+  }
+  h1,
+  h2,
+  h3 {
+    color: var(--color-tinta);
+    font-weight: 600;
+  }
+}
+
+/* Números financeiros alinhados (algarismos tabulares). */
+@utility numero {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
