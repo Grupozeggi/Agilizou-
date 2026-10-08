@@ -96,7 +96,7 @@ export default function Landing() {
         <section className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-14 sm:py-20 lg:grid-cols-2">
           <div>
             <p className="mb-4 inline-block border-b border-dourado pb-1 text-sm font-medium text-royal-escuro">
-              Para mecânicas, clínicas, salões, barbearias e lojas
+              Para a organização e a gestão do seu negócio
             </p>
             <h1 className="text-4xl leading-tight sm:text-5xl">Agilizou. Seu caixa em dia.</h1>
             <p className="mt-4 max-w-xl text-lg text-suave">
