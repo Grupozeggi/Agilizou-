@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BarChart3, FileBarChart, CalendarDays, Contact, MessageCircle, Users, ArrowLeftRight, Boxes, CalendarClock, Settings, ShoppingCart, Tags, Wrench, type LucideIcon } from "lucide-react";
+import { BarChart3, FileBarChart, CalendarDays, Contact, MessageCircle, Link2, Megaphone, Users, ArrowLeftRight, Boxes, CalendarClock, Settings, ShoppingCart, Tags, Wrench, type LucideIcon } from "lucide-react";
 import { termosDoNicho } from "@/config/nichos";
 import { exigirCliente } from "@/lib/sessao";
 
@@ -27,6 +27,7 @@ export default async function Menu() {
             titulo: "Atendimentos",
             itens: [
               { href: "/app/agenda", rotulo: "Agenda", icone: CalendarDays, descricao: "Dia, semana e presença" },
+              { href: "/app/configuracoes/agendamento-online", rotulo: "Link de agendamento", icone: Link2, descricao: `O ${t.cliente} marca sozinho e cai na sua agenda` },
               { href: "/app/profissionais", rotulo: maiusc(t.profissionais), icone: Users, descricao: "Quem atende" },
               { href: "/app/agenda/indicadores", rotulo: "Indicadores", icone: BarChart3, descricao: "Comparecimento, faltas e horas vagas" },
               { href: "/app/mensagens", rotulo: "Mensagens automáticas", icone: MessageCircle, descricao: "Lembretes de horário no WhatsApp" },
@@ -50,6 +51,10 @@ export default async function Menu() {
         { href: "/app/configuracoes/agenda", rotulo: "Agenda", icone: CalendarDays, descricao: empresa.agenda_ativa ? "Ligada · horário de atendimento" : "Desligada · toque para ligar" },
         { href: "/app/configuracoes", rotulo: "Ajustes e assinatura", icone: Settings, descricao: "Conta, plano e sair" },
       ],
+    },
+    {
+      titulo: "Crescer",
+      itens: [{ href: "/app/marketing", rotulo: "Marketing para o seu negócio", icone: Megaphone, descricao: "Fale com o nosso time para atrair mais clientes" }],
     },
   ];
 
