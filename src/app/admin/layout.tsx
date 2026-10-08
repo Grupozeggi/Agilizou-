@@ -26,6 +26,19 @@ export default function LayoutAdmin({ children }: LayoutProps<"/admin">) {
           </form>
         </div>
       </header>
+      <nav className="border-b border-borda bg-white">
+        <div className="mx-auto flex max-w-6xl gap-1 px-4 text-sm font-semibold">
+          {[
+            ["/admin", "Painel"],
+            ["/admin/empresas", "Empresas"],
+            ["/admin/logs", "Auditoria"],
+          ].map(([href, rotulo]) => (
+            <Link key={href} href={href} className="px-3 py-3 text-royal hover:bg-cartao">
+              {rotulo}
+            </Link>
+          ))}
+        </div>
+      </nav>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
     </div>
   );

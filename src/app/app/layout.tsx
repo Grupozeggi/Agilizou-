@@ -6,15 +6,29 @@ import { NavInferior } from "@/components/nav-inferior";
 import { mensagemSomenteLeitura } from "@/lib/assinatura";
 import { exigirCliente } from "@/lib/sessao";
 import { sair } from "@/app/(auth)/acoes";
+import { sairModoSuporte } from "@/app/admin/acoes";
 
 export default async function LayoutApp({ children }: LayoutProps<"/app">) {
-  const { empresa } = await exigirCliente();
+  const { empresa, suporte, supabase } = await exigirCliente();
   // Quem ainda não respondeu as 3 perguntas iniciais vai para o onboarding.
   if (!empresa.onboarding_concluido) redirect("/boas-vindas");
   const bloqueio = mensagemSomenteLeitura(empresa.status_assinatura, empresa.teste_ate);
+  if (!suporte) await supabase.rpc("registrar_acesso");
 
   return (
     <div className="flex min-h-dvh flex-col bg-cartao">
+      {suporte && (
+        <div className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-dourado px-4 py-2 text-sm font-semibold text-royal-escuro print:hidden" role="status">
+          <span>
+            Modo suporte: você está na conta de {empresa.nome}
+          </span>
+          <form action={sairModoSuporte}>
+            <button type="submit" className="rounded-lg bg-royal-escuro px-3 py-1.5 text-xs text-white">
+              Sair do modo suporte
+            </button>
+          </form>
+        </div>
+      )}
       <header className="sticky top-0 z-10 border-b border-borda bg-white/90 backdrop-blur print:hidden">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
           <Link href="/app" aria-label="Início">

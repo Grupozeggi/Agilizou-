@@ -605,6 +605,8 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
         ])
       ).rows[0].id;
       await expect(como(A(), "update vendas set total_centavos = 1 where id = $1", [id])).rejects.toThrow(/não pode ser alterada/);
+      const itens = await como(A(), "update itens_venda set subtotal_centavos = 1 where venda_id = $1", [id]);
+      expect(itens.rowCount).toBe(0); // itens de venda não têm política de update
       await como(A(), "select cancelar_venda($1)", [id]);
       expect(await estoque(p)).toBe(10);
       const l = await db.query("select count(*)::int n from lancamentos where venda_id = $1 and deleted_at is null", [id]);
@@ -756,6 +758,50 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       await db.query("update empresas set status_assinatura = 'suspenso' where id = $1", [empresaA]);
       const adm = await como(claimsAdmin(), "update lancamentos set valor_centavos = 3 where id = $1", [id]);
       expect(adm.rowCount).toBe(1);
+    });
+  });
+
+  describe("admin e modo suporte", () => {
+    const suporte = (empresa: string) => ({ "x-modo-suporte": "1", "x-empresa-suporte": empresa });
+
+    it("no modo suporte o admin vê e grava só a empresa escolhida, com log", async () => {
+      const adm = claimsAdmin();
+      const empresas = await como(adm, "select id from empresas", [], suporte(empresaB));
+      expect(empresas.rows.map((r) => r.id)).toEqual([empresaB]);
+      const lanc = await como(adm, "select count(*)::int n from lancamentos", [], suporte(empresaB));
+      expect(lanc.rows[0].n).toBe(1);
+      // inserção sem empresa_id cai na empresa do suporte
+      const novo = await como(adm, "insert into lancamentos (tipo, valor_centavos) values ('saida', 700) returning empresa_id", [], suporte(empresaB));
+      expect(novo.rows[0].empresa_id).toBe(empresaB);
+      const log = await db.query("select tabela, acao, empresa_id, modo_suporte from log_admin");
+      expect(log.rows).toEqual([{ tabela: "lancamentos", acao: "insert", empresa_id: empresaB, modo_suporte: true }]);
+    });
+
+    it("cliente que forja os cabeçalhos de suporte não vê nada de outra empresa", async () => {
+      const r = await como(claimsDe(ids.donoA), "select id from empresas", [], suporte(empresaB));
+      expect(r.rows.map((x) => x.id)).toEqual([empresaA]);
+      const l = await como(claimsDe(ids.donoA), "select count(*)::int n from lancamentos", [], suporte(empresaB));
+      expect(l.rows[0].n).toBe(0);
+    });
+
+    it("admin sem 2FA com cabeçalho de suporte também não vê", async () => {
+      const r = await como(claimsAdmin("aal1"), "select count(*)::int n from empresas", [], suporte(empresaB));
+      expect(r.rows[0].n).toBe(0);
+    });
+
+    it("painel e lista de empresas só para admin fora do modo suporte", async () => {
+      const lista = await como(claimsAdmin(), "select nome, emails from admin_empresas('clínica')");
+      expect(lista.rows).toEqual([{ nome: "Clínica B", emails: "b@teste.com" }]);
+      const painel = (await como(claimsAdmin(), "select admin_painel() as p")).rows[0].p;
+      expect(painel.total).toBe(3);
+      await expect(como(claimsDe(ids.donoA), "select * from admin_empresas()")).rejects.toThrow(/Acesso negado/);
+      await expect(como(claimsAdmin(), "select admin_painel()", [], suporte(empresaB))).rejects.toThrow(/Acesso negado/);
+    });
+
+    it("registra o último acesso do cliente, mas não o do admin em suporte", async () => {
+      await como(claimsDe(ids.donoA), "select registrar_acesso()");
+      const r = await db.query("select ultimo_acesso_em is not null as ok from empresas where id = $1", [empresaA]);
+      expect(r.rows[0].ok).toBe(true);
     });
   });
 });

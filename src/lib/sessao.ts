@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { Limites } from "@/config/planos";
 import { adminCom2fa, type Claims } from "@/lib/acesso";
 import { mensagemSomenteLeitura } from "@/lib/assinatura";
+import { temPapelAdmin } from "@/lib/acesso";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 
 /**
@@ -44,10 +45,12 @@ export const exigirCliente = cache(async () => {
     .single<Empresa>();
 
   if (error || !empresa) {
-    // Usuário sem empresa (ex.: admin) não usa a área do cliente.
-    redirect("/entrar?erro=conta");
+    // Usuário sem empresa (ex.: admin fora do modo suporte) não usa a área do cliente.
+    redirect(temPapelAdmin(claims) ? "/admin" : "/entrar?erro=conta");
   }
-  return { claims, empresa, supabase };
+  // Admin dentro da conta de um cliente (modo suporte).
+  const suporte = temPapelAdmin(claims);
+  return { claims, empresa, supabase, suporte };
 });
 
 /** Admin com 2FA. Qualquer outro vai para a tela de acesso negado. */
@@ -55,7 +58,8 @@ export const exigirAdmin = cache(async () => {
   const claims = await obterClaims();
   if (!claims) redirect("/entrar?proximo=/admin");
   if (!adminCom2fa(claims)) redirect("/acesso-negado");
-  return { claims, supabase: await criarClienteServidor() };
+  // No painel o admin vê todas as empresas: consulta sem os cabeçalhos de suporte.
+  return { claims, supabase: await criarClienteServidor({ semSuporte: true }) };
 });
 
 /**
@@ -66,5 +70,7 @@ export const exigirAdmin = cache(async () => {
  */
 export async function exigirEscrita() {
   const ctx = await exigirCliente();
-  return { ...ctx, bloqueio: mensagemSomenteLeitura(ctx.empresa.status_assinatura, ctx.empresa.teste_ate) };
+  // No modo suporte o admin pode corrigir dados mesmo de conta bloqueada.
+  const bloqueio = ctx.suporte ? null : mensagemSomenteLeitura(ctx.empresa.status_assinatura, ctx.empresa.teste_ate);
+  return { ...ctx, bloqueio };
 }

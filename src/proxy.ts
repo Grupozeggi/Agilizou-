@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { adminCom2fa, temPapelAdmin, type Claims } from "@/lib/acesso";
 import { registrarAcessoNegado } from "@/lib/log-acesso";
+import { COOKIE_SUPORTE, empresaDoCookie } from "@/lib/suporte";
 
 /**
  * Roda antes de cada página:
@@ -72,8 +73,11 @@ export async function proxy(request: NextRequest) {
 
   if (caminho === "/app" || caminho.startsWith("/app/") || caminho === "/boas-vindas") {
     if (!claims) return redirecionar("/entrar", caminho + request.nextUrl.search);
-    // Admin não tem empresa própria; o acesso a clientes é pelo modo suporte.
-    if (temPapelAdmin(claims)) return redirecionar("/admin");
+    // Admin não tem empresa própria; só entra em /app pelo modo suporte (com 2FA).
+    if (temPapelAdmin(claims)) {
+      const suporte = empresaDoCookie(request.cookies.get(COOKIE_SUPORTE)?.value);
+      if (!suporte || !adminCom2fa(claims)) return redirecionar("/admin");
+    }
     return resposta;
   }
 
