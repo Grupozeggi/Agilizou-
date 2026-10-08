@@ -464,4 +464,55 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       expect(b.rows[0].n).toBe(1);
     });
   });
+
+  describe("resumo financeiro (saldo, lucro e resultado do mês)", () => {
+    it("calcula saldo, entradas, saídas e DRE só com o que foi pago", async () => {
+      const A = claimsDe(ids.donoA);
+      await db.query("update empresas set saldo_inicial_centavos = 100000 where id = $1", [empresaA]);
+      const cat = async (tipo: string, grupo: string, nome: string) =>
+        (await como(A, "insert into categorias (tipo, grupo, nome) values ($1, $2, $3) returning id", [tipo, grupo, nome])).rows[0].id;
+      const servico = await cat("entrada", "receita", "Serviço");
+      const pecas = await cat("saida", "custo", "Peças");
+      const aluguel = await cat("saida", "despesa", "Aluguel");
+      const lanc = (tipo: string, v: number, data: string, categoria: string | null, status = "pago") =>
+        como(A, "insert into lancamentos (tipo, valor_centavos, data, categoria_id, status) values ($1, $2, $3, $4, $5)", [
+          tipo, v, data, categoria, status,
+        ]);
+      const hoje = (await db.query("select hoje_sp()::text as d")).rows[0].d as string;
+      const mes = hoje.slice(0, 7);
+      await lanc("entrada", 50000, `${mes}-01`, servico); // +500
+      await lanc("entrada", 25050, `${mes}-01`, servico); // +250,50
+      await lanc("saida", 20000, `${mes}-01`, pecas); // custo 200
+      await lanc("saida", 15000, `${mes}-01`, aluguel); // despesa 150
+      await lanc("saida", 990, `${mes}-01`, null); // despesa sem categoria 9,90
+      await lanc("saida", 99999, `${mes}-01`, aluguel, "pendente"); // pendente: fora do saldo
+      await lanc("entrada", 70000, "2020-01-10", servico); // outro mês: entra no saldo, não no período
+      await como(A, "update lancamentos set deleted_at = now() where valor_centavos = 990"); // excluído não conta
+      await lanc("saida", 990, `${mes}-01`, null);
+
+      const r = (
+        await como(A, "select resumo_financeiro($1::date, (date_trunc('month', $1::date) + interval '1 month - 1 day')::date) as r", [
+          `${mes}-01`,
+        ])
+      ).rows[0].r;
+
+      expect(r.entradas).toBe(75050);
+      expect(r.saidas).toBe(35990);
+      expect(r.receitas).toBe(75050);
+      expect(r.custos).toBe(20000);
+      expect(r.despesas).toBe(15990);
+      expect(r.receitas - r.custos - r.despesas).toBe(39060); // lucro R$ 390,60
+      expect(r.a_pagar_periodo).toBe(99999);
+      // saldo = inicial 1000 + 500 + 250,50 + 700 (2020) - 200 - 150 - 9,90
+      expect(r.saldo_atual).toBe(100000 + 50000 + 25050 + 70000 - 20000 - 15000 - 990);
+      expect(r.serie).toHaveLength(6);
+      expect(r.serie.at(-1)).toEqual({ mes, entradas: 75050, saidas: 35990 });
+    });
+
+    it("não mistura dados de outra empresa", async () => {
+      await como(claimsDe(ids.donoA), "insert into lancamentos (tipo, valor_centavos) values ('entrada', 123456)");
+      const r = (await como(claimsDe(ids.donoB), "select resumo_financeiro(current_date - 30, current_date) as r")).rows[0].r;
+      expect(r.entradas).toBe(15000); // só o lançamento da própria empresa B
+    });
+  });
 });
