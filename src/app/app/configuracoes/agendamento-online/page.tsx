@@ -6,13 +6,14 @@ import { termosDoNicho } from "@/config/nichos";
 import { urlDoSite } from "@/lib/env";
 import { exigirCliente } from "@/lib/sessao";
 import { FormAgendamentoOnline } from "./form";
+import { LogoDaEmpresa } from "./logo";
 
 export const metadata: Metadata = { title: "Link de agendamento" };
 
 export default async function AgendamentoOnline() {
   const { supabase, empresa } = await exigirCliente();
   const t = termosDoNicho(empresa.nicho);
-  const [{ data: e }, { count: profissionais }, { count: servicos }] = await Promise.all([
+  const [{ data: e }, { count: profissionais }, { count: servicos }, { data: logo }] = await Promise.all([
     supabase
       .from("empresas")
       .select(
@@ -22,6 +23,7 @@ export default async function AgendamentoOnline() {
       .single(),
     supabase.from("profissionais").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("ativo", true),
     supabase.from("servicos").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    supabase.from("logos_empresa").select("imagem").eq("empresa_id", empresa.id).maybeSingle(),
   ]);
 
   return (
@@ -58,6 +60,8 @@ export default async function AgendamentoOnline() {
           </Link>
         </Aviso>
       )}
+
+      <LogoDaEmpresa empresa={empresa.nome} inicial={(logo?.imagem as string | undefined) ?? null} />
 
       <FormAgendamentoOnline
         site={urlDoSite()}

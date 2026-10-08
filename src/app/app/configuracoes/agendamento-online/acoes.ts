@@ -5,6 +5,7 @@ import { z } from "zod";
 import { gerarSlug, slugValido } from "@/lib/agendamento-online";
 import { hojeIso } from "@/lib/datas";
 import { errosPorCampo, type EstadoForm } from "@/lib/formulario";
+import { lerLogo } from "@/lib/logo";
 import { exigirEscrita } from "@/lib/sessao";
 
 const vazio = (v: unknown) => (v === "" || v === null ? undefined : v);
@@ -58,4 +59,42 @@ export async function salvarAgendamentoOnline(_: EstadoForm, form: FormData): Pr
   revalidatePath("/app", "layout");
   revalidatePath(`/agendar/${r.data.slug}`);
   return { sucesso: r.data.agendamento_online ? "Link atualizado. Já pode enviar para os clientes." : "Ajustes salvos. O link está desligado." };
+}
+
+/** Atualiza a página pública da empresa depois de mexer na logo. */
+async function atualizarPaginaPublica(supabase: Awaited<ReturnType<typeof exigirEscrita>>["supabase"], empresaId: string) {
+  const { data } = await supabase.from("empresas").select("slug").eq("id", empresaId).single();
+  if (data?.slug) revalidatePath(`/agendar/${data.slug}`);
+  revalidatePath("/app/configuracoes/agendamento-online");
+}
+
+/**
+ * Guarda a logo da empresa. A imagem já chega reduzida pelo navegador
+ * ("data:image/...;base64,..."); aqui ela é conferida de novo antes de gravar.
+ */
+export async function salvarLogo(imagem: string): Promise<EstadoForm> {
+  if (!lerLogo(imagem)) return { erro: "Não foi possível usar essa imagem. Envie um arquivo PNG ou JPG." };
+
+  const { supabase, empresa, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
+
+  const { error } = await supabase.from("logos_empresa").upsert({ empresa_id: empresa.id, imagem }, { onConflict: "empresa_id" });
+  if (error) {
+    console.error("[agendamento online] logo", error);
+    return { erro: "Não foi possível salvar a logo." };
+  }
+  await atualizarPaginaPublica(supabase, empresa.id);
+  return { sucesso: "Logo salva. Ela já aparece no seu link." };
+}
+
+/** Tira a logo: o link volta a mostrar a inicial do nome da empresa. */
+export async function removerLogo(): Promise<EstadoForm> {
+  const { supabase, empresa } = await exigirEscrita();
+  const { error } = await supabase.from("logos_empresa").delete().eq("empresa_id", empresa.id);
+  if (error) {
+    console.error("[agendamento online] remover logo", error);
+    return { erro: "Não foi possível remover a logo." };
+  }
+  await atualizarPaginaPublica(supabase, empresa.id);
+  return { sucesso: "Logo removida." };
 }
