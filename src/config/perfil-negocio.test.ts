@@ -16,7 +16,7 @@ describe("perguntas do cadastro", () => {
 
   it("toda pergunta tem tela, texto e pelo menos duas respostas sem repetir", () => {
     for (const p of PERGUNTAS) {
-      expect(TELA_DA_PERGUNTA[p.campo]).toBeGreaterThanOrEqual(3);
+      expect(TELA_DA_PERGUNTA[p.campo]).toBeGreaterThanOrEqual(2);
       expect(p.pergunta.endsWith("?")).toBe(true);
       expect(p.opcoes.length).toBeGreaterThanOrEqual(2);
       expect(new Set(valoresDe(p.campo)).size).toBe(p.opcoes.length);

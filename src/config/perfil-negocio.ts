@@ -93,14 +93,14 @@ export const PERGUNTAS: Pergunta[] = [
 
 export type CampoPerfil = Pergunta["campo"];
 
-/** Em qual tela do onboarding cada pergunta aparece (3 = sobre o negócio, 4 = para terminar). */
-export const TELA_DA_PERGUNTA: Record<CampoPerfil, 3 | 4> = {
-  tempo_negocio: 3,
-  equipe: 3,
-  faturamento: 3,
-  controle_caixa: 3,
-  dificuldade: 4,
-  origem: 4,
+/** Em qual tela do onboarding cada pergunta aparece (2 = sobre o negócio, 3 = para terminar). */
+export const TELA_DA_PERGUNTA: Record<CampoPerfil, 2 | 3> = {
+  tempo_negocio: 2,
+  equipe: 2,
+  faturamento: 2,
+  controle_caixa: 2,
+  dificuldade: 3,
+  origem: 3,
 };
 
 const porCampo = new Map(PERGUNTAS.map((p) => [p.campo, p]));
