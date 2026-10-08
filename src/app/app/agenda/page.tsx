@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BarChart3, CalendarOff, ChevronLeft, ChevronRight, Plus, Users } from "lucide-react";
+import { BarChart3, CalendarOff, ChevronLeft, ChevronRight, Link2, Plus, Users } from "lucide-react";
 import { Aviso, Cartao } from "@/components/ui";
 import { termosDoNicho } from "@/config/nichos";
 import { horariosLivres, paraMinutos, partesSp } from "@/lib/agenda";
@@ -57,6 +57,9 @@ export default async function Agenda({ searchParams }: PageProps<"/app/agenda">)
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl">Agenda</h1>
         <div className="flex gap-2">
+          <Link href="/app/configuracoes/agendamento-online" className="grid size-10 place-items-center rounded-xl border border-borda bg-white text-royal" aria-label="Link de agendamento">
+            <Link2 className="size-4" />
+          </Link>
           <Link href="/app/agenda/indicadores" className="grid size-10 place-items-center rounded-xl border border-borda bg-white text-royal" aria-label="Indicadores">
             <BarChart3 className="size-4" />
           </Link>

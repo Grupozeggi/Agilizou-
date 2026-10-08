@@ -50,7 +50,9 @@ export function CartaoAtendimento({ a, agoraIso, compacto }: { a: Atendimento; a
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium text-tinta">{a.cliente?.nome}</span>
           <span className="block truncate text-xs text-suave">
-            {[a.servico?.nome, compacto ? a.profissional?.nome : null, a.servico ? formatarReais(a.servico.preco_centavos) : null].filter(Boolean).join(" · ")}
+            {[a.servico?.nome, compacto ? a.profissional?.nome : null, a.servico ? formatarReais(a.servico.preco_centavos) : null, a.origem === "link" ? "pelo link" : null]
+              .filter(Boolean)
+              .join(" · ")}
           </span>
         </span>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${COR[status]}`}>{STATUS_AGENDA[status]}</span>

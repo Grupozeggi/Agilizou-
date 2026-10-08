@@ -11,13 +11,15 @@ export type Atendimento = {
   status: StatusAgenda;
   observacao: string | null;
   venda_id: string | null;
+  /** "link" quando o próprio cliente marcou pelo link público. */
+  origem: "app" | "link";
   cliente: { id: string; nome: string; whatsapp: string | null } | null;
   profissional: { id: string; nome: string } | null;
   servico: { id: string; nome: string; preco_centavos: number } | null;
 };
 
 export const CAMPOS_ATENDIMENTO =
-  "id, inicio, fim, status, observacao, venda_id, cliente:clientes(id, nome, whatsapp), profissional:profissionais(id, nome), servico:servicos(id, nome, preco_centavos)";
+  "id, inicio, fim, status, observacao, venda_id, origem, cliente:clientes(id, nome, whatsapp), profissional:profissionais(id, nome), servico:servicos(id, nome, preco_centavos)";
 
 export async function atendimentosEntre(supabase: Supabase, de: string, ate: string): Promise<Atendimento[]> {
   const { data, error } = await supabase
