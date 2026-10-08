@@ -357,4 +357,64 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       await db.query("reset role");
     });
   });
+
+  describe("código e código de barras dos produtos", () => {
+    const cadastrar = (sub: string, nome: string, codigoBarras?: string) =>
+      como(
+        claimsDe(sub),
+        "insert into produtos (nome, codigo_barras) values ($1, $2) returning codigo, codigo_barras",
+        [nome, codigoBarras ?? null],
+      ).then((r) => r.rows[0]);
+
+    it("numera em sequência por empresa e gera o EAN-13 interno", async () => {
+      const a1 = await cadastrar(ids.donoA, "Óleo 5W30");
+      const a2 = await cadastrar(ids.donoA, "Filtro de ar");
+      const b1 = await cadastrar(ids.donoB, "Resina");
+      expect([a1.codigo, a2.codigo, b1.codigo].map(Number)).toEqual([1, 2, 1]);
+      expect(a1.codigo_barras).toBe("2000000000015");
+      expect(a2.codigo_barras).toBe("2000000000022");
+      expect(b1.codigo_barras).toBe("2000000000015"); // outra empresa: pode repetir
+    });
+
+    it("usa o código da embalagem quando informado", async () => {
+      const p = await cadastrar(ids.donoA, "Caneta", "4006381333931");
+      expect(p.codigo_barras).toBe("4006381333931");
+      expect(Number(p.codigo)).toBe(1);
+    });
+
+    it("ignora número enviado pelo app", async () => {
+      const r = await como(
+        claimsDe(ids.donoA),
+        "insert into produtos (nome, codigo) values ('Pneu', 999) returning codigo",
+      );
+      expect(Number(r.rows[0].codigo)).toBe(1);
+    });
+
+    it("não deixa dois produtos ativos com o mesmo código de barras", async () => {
+      await cadastrar(ids.donoA, "Caneta", "4006381333931");
+      await expect(cadastrar(ids.donoA, "Caneta azul", "4006381333931")).rejects.toThrow(/codigo_barras_unico/);
+    });
+
+    it("código de barras de produto excluído pode ser reaproveitado", async () => {
+      await cadastrar(ids.donoA, "Caneta", "4006381333931");
+      await como(claimsDe(ids.donoA), "update produtos set deleted_at = now() where codigo_barras = '4006381333931'");
+      const p = await cadastrar(ids.donoA, "Caneta nova", "4006381333931");
+      expect(Number(p.codigo)).toBe(2);
+    });
+
+    it("código não muda; apagar o código de barras volta para o interno", async () => {
+      await cadastrar(ids.donoA, "Caneta", "4006381333931");
+      await expect(como(claimsDe(ids.donoA), "update produtos set codigo = 50")).rejects.toThrow(/não pode ser alterado/);
+      const r = await como(claimsDe(ids.donoA), "update produtos set codigo_barras = '' returning codigo_barras");
+      expect(r.rows[0].codigo_barras).toBe("2000000000015");
+    });
+
+    it("cliente não lê nem mexe nos contadores", async () => {
+      await cadastrar(ids.donoA, "Óleo");
+      await expect(como(claimsDe(ids.donoA), "select * from sequencias")).rejects.toThrow(/permission denied/);
+      await expect(
+        como(claimsDe(ids.donoA), "select proximo_numero($1, 'produto')", [empresaB]),
+      ).rejects.toThrow(/permission denied/);
+    });
+  });
 });

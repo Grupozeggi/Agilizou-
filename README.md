@@ -57,6 +57,15 @@ um Postgres 15+ local (nunca para o banco de produção).
 - A chave `service_role` só é usada em `src/lib/supabase/servico.ts` (marcado `server-only`).
 - Dinheiro sempre em centavos (inteiro). Nada é apagado de verdade (`deleted_at`).
 
+## Código e código de barras dos produtos
+
+Todo produto recebe automaticamente um **código sequencial por empresa** (1, 2, 3...) que nunca muda,
+e um **código de barras EAN-13 interno** (`20` + código com 10 dígitos + dígito verificador; a faixa
+20–29 é reservada pela GS1 para uso interno da loja). Se o produto já tem código na embalagem, basta
+digitar ou bipar no cadastro e ele é usado no lugar. Leitores USB/Bluetooth funcionam como teclado,
+então bipar = digitar o código + Enter. Regras em `src/lib/codigo-barras.ts` e na migration
+`20261008000003_codigo_produto.sql`.
+
 ## Estrutura
 
 ```
