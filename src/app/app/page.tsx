@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Sparkles, Tags } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Sparkles } from "lucide-react";
 import { Cartao } from "@/components/ui";
 import { diasEntre, formatarData, hojeIso } from "@/lib/datas";
 import { exigirCliente } from "@/lib/sessao";
@@ -35,13 +35,20 @@ export default async function Inicio() {
         </p>
       </Cartao>
 
-      <Link href="/app/configuracoes/categorias" className="block">
-        <Cartao className="flex items-center gap-3 hover:bg-cartao">
-          <Tags className="size-5 text-royal" strokeWidth={1.75} />
-          <span className="flex-1 font-medium text-tinta">Categorias de entradas e saídas</span>
-          <ChevronRight className="size-5 text-suave" strokeWidth={1.75} />
-        </Cartao>
-      </Link>
+      <div className="grid grid-cols-2 gap-3">
+        <Link
+          href="/app/lancamentos/novo?tipo=entrada"
+          className="flex h-14 items-center justify-center gap-2 rounded-cartao bg-white font-semibold text-entrada shadow-suave"
+        >
+          <ArrowDownLeft className="size-5" strokeWidth={2} /> Entrada
+        </Link>
+        <Link
+          href="/app/lancamentos/novo?tipo=saida"
+          className="flex h-14 items-center justify-center gap-2 rounded-cartao bg-white font-semibold text-saida shadow-suave"
+        >
+          <ArrowUpRight className="size-5" strokeWidth={2} /> Saída
+        </Link>
+      </div>
     </div>
   );
 }

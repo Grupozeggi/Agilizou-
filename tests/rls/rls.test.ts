@@ -417,4 +417,51 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       ).rejects.toThrow(/permission denied/);
     });
   });
+
+  describe("lançamentos", () => {
+    const categoria = async (sub: string, tipo: "entrada" | "saida", nome: string) =>
+      (
+        await como(
+          claimsDe(sub),
+          "insert into categorias (tipo, grupo, nome) values ($1, $2, $3) returning id",
+          [tipo, tipo === "entrada" ? "receita" : "despesa", nome],
+        )
+      ).rows[0].id as string;
+
+    it("recusa categoria de entrada num lançamento de saída", async () => {
+      const cat = await categoria(ids.donoA, "entrada", "Serviço");
+      await expect(
+        como(claimsDe(ids.donoA), "insert into lancamentos (tipo, valor_centavos, categoria_id) values ('saida', 100, $1)", [cat]),
+      ).rejects.toThrow(/não combina/);
+    });
+
+    it("pago ganha data de pagamento; pendente ganha vencimento e perde pago_em", async () => {
+      const pago = await como(
+        claimsDe(ids.donoA),
+        "insert into lancamentos (tipo, valor_centavos, data) values ('saida', 100, '2026-10-05') returning pago_em::text",
+      );
+      expect(pago.rows[0].pago_em).toBe("2026-10-05");
+      const pend = await como(
+        claimsDe(ids.donoA),
+        `insert into lancamentos (tipo, valor_centavos, data, status, pago_em)
+         values ('saida', 100, '2026-10-20', 'pendente', '2026-10-01') returning pago_em, vencimento::text`,
+      );
+      expect(pend.rows[0]).toEqual({ pago_em: null, vencimento: "2026-10-20" });
+    });
+
+    it("parcelado ou recorrente conta como 1 lançamento no limite do mês", async () => {
+      await como(
+        claimsDe(ids.donoA),
+        `insert into lancamentos (tipo, valor_centavos, data, status, grupo_id, parcela_numero, parcela_total)
+         select 'saida', 1000, current_date + (n || ' month')::interval, 'pendente', '11111111-1111-1111-1111-111111111111', n + 1, 12
+           from generate_series(0, 11) n`,
+      );
+      await como(claimsDe(ids.donoA), "insert into lancamentos (tipo, valor_centavos) values ('entrada', 500)");
+      const r = await como(claimsDe(ids.donoA), "select uso_lancamentos_mes() as n");
+      expect(r.rows[0].n).toBe(2);
+      // a outra empresa não entra na conta
+      const b = await como(claimsDe(ids.donoB), "select uso_lancamentos_mes() as n");
+      expect(b.rows[0].n).toBe(1);
+    });
+  });
 });

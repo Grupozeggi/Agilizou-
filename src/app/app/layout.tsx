@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { NavInferior } from "@/components/nav-inferior";
 import { exigirCliente } from "@/lib/sessao";
 import { sair } from "@/app/(auth)/acoes";
 
@@ -32,7 +33,8 @@ export default async function LayoutApp({ children }: LayoutProps<"/app">) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-28 pt-6">{children}</main>
+      <NavInferior />
     </div>
   );
 }

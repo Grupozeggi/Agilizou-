@@ -50,9 +50,25 @@ export function CampoDinheiro({
           aria-describedby={idErro}
           value={texto}
           onChange={(e) => {
-            const digitos = e.target.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 13);
+            // Não confiamos na posição do cursor: cada dígito digitado entra
+            // sempre no fim e apagar remove sempre o último (como em app de banco).
+            const evento = e.nativeEvent as InputEvent;
+            const atual = String(centavos);
+            let digitos: string;
+            if (evento.inputType?.startsWith("delete")) {
+              digitos = atual.slice(0, -1);
+            } else if (evento.inputType === "insertText" && evento.data) {
+              digitos = atual + evento.data.replace(/\D/g, "");
+            } else {
+              // colar, autocompletar etc.: usa o que ficou no campo
+              digitos = e.target.value.replace(/\D/g, "");
+            }
+            digitos = digitos.replace(/^0+/, "").slice(0, 13);
             setCentavos(Number(digitos || "0"));
           }}
+          onFocus={(e) => moverCursorParaFim(e.currentTarget)}
+          onClick={(e) => moverCursorParaFim(e.currentTarget)}
+          onKeyUp={(e) => moverCursorParaFim(e.currentTarget)}
           className={`numero w-full bg-transparent text-2xl font-semibold outline-none ${negativo ? "text-saida" : "text-tinta"}`}
         />
       </div>
@@ -77,6 +93,11 @@ export function CampoDinheiro({
       )}
     </div>
   );
+}
+
+function moverCursorParaFim(campo: HTMLInputElement) {
+  const fim = campo.value.length;
+  requestAnimationFrame(() => campo.setSelectionRange(fim, fim));
 }
 
 /** 123456 → "1.234,56" (sem passar por float). */

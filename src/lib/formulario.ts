@@ -4,6 +4,10 @@ import type { z } from "zod";
 export type EstadoForm = {
   erro?: string;
   sucesso?: string;
+  /** Alerta que não impede a ação (ex.: perto do limite do plano). */
+  aviso?: string;
+  /** true quando o limite do plano foi atingido (mostra o botão de upgrade). */
+  limiteAtingido?: boolean;
   erros?: Record<string, string>;
   valores?: Record<string, string>;
 };

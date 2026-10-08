@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import type { Limites } from "@/config/planos";
 import { adminCom2fa, type Claims } from "@/lib/acesso";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 
@@ -19,6 +20,7 @@ export type Empresa = {
   teste_ate: string;
   onboarding_concluido: boolean;
   agenda_ativa: boolean;
+  limites_personalizados: Partial<Limites> | null;
 };
 
 export const obterClaims = cache(async (): Promise<Claims | null> => {
@@ -35,7 +37,9 @@ export const exigirCliente = cache(async () => {
   const supabase = await criarClienteServidor();
   const { data: empresa, error } = await supabase
     .from("empresas")
-    .select("id, nome, nicho, plano, status_assinatura, teste_ate, onboarding_concluido, agenda_ativa")
+    .select(
+      "id, nome, nicho, plano, status_assinatura, teste_ate, onboarding_concluido, agenda_ativa, limites_personalizados",
+    )
     .single<Empresa>();
 
   if (error || !empresa) {
