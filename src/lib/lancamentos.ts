@@ -97,7 +97,7 @@ const MESES = [
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
 
-/** '2026-10' → 'outubro de 2026' */
+/** '2026-10' → 'outubro de 2026' (use maiuscula() para começar com letra maiúscula) */
 export function nomeDoMes(anoMes: string): string {
   const [a, m] = anoMes.split("-").map(Number);
   return `${MESES[m - 1]} de ${a}`;
@@ -114,3 +114,6 @@ export const FORMAS_PAGAMENTO = {
 } as const;
 
 export type FormaPagamento = keyof typeof FORMAS_PAGAMENTO;
+
+/** Primeira letra maiúscula: "outubro de 2026" → "Outubro de 2026". */
+export const maiuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

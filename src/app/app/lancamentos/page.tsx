@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Cartao } from "@/components/ui";
 import { formatarData, hojeIso } from "@/lib/datas";
 import { formatarReais, somar } from "@/lib/dinheiro";
-import { FORMAS_PAGAMENTO, limitesDoMes, nomeDoMes, somarMeses, type FormaPagamento } from "@/lib/lancamentos";
+import { FORMAS_PAGAMENTO, limitesDoMes, maiuscula, nomeDoMes, somarMeses, type FormaPagamento } from "@/lib/lancamentos";
 import { exigirCliente } from "@/lib/sessao";
 
 export const metadata: Metadata = { title: "Lançamentos" };
@@ -72,7 +72,7 @@ export default async function Lancamentos({ searchParams }: PageProps<"/app/lanc
         <Link href={link(somarMeses(`${mes}-01`, -1).slice(0, 7))} className="grid size-11 place-items-center text-royal" aria-label="Mês anterior">
           <ChevronLeft className="size-5" />
         </Link>
-        <span className="font-semibold capitalize text-tinta">{nomeDoMes(mes)}</span>
+        <span className="font-semibold text-tinta">{maiuscula(nomeDoMes(mes))}</span>
         <Link href={link(somarMeses(`${mes}-01`, 1).slice(0, 7))} className="grid size-11 place-items-center text-royal" aria-label="Próximo mês">
           <ChevronRight className="size-5" />
         </Link>

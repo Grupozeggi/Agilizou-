@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BarChart3, CalendarDays, Contact, MessageCircle, Users, ArrowLeftRight, Boxes, CalendarClock, Settings, ShoppingCart, Tags, Wrench, type LucideIcon } from "lucide-react";
+import { BarChart3, FileBarChart, CalendarDays, Contact, MessageCircle, Users, ArrowLeftRight, Boxes, CalendarClock, Settings, ShoppingCart, Tags, Wrench, type LucideIcon } from "lucide-react";
 import { termosDoNicho } from "@/config/nichos";
 import { exigirCliente } from "@/lib/sessao";
 
@@ -18,6 +18,7 @@ export default async function Menu() {
       itens: [
         { href: "/app/lancamentos", rotulo: "Lançamentos", icone: ArrowLeftRight, descricao: "Entradas e saídas do mês" },
         { href: "/app/contas", rotulo: "Contas", icone: CalendarClock, descricao: "A pagar e a receber" },
+        { href: "/app/relatorios", rotulo: "Relatórios", icone: FileBarChart, descricao: "Mais vendidos, margem, despesas e lucro" },
       ],
     },
     ...(empresa.agenda_ativa

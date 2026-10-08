@@ -700,4 +700,26 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       expect(r.rows[0].s).toBe(false);
     });
   });
+
+  describe("relatórios", () => {
+    it("mais vendidos agrupa itens e calcula lucro; lucro mensal bate com o resultado", async () => {
+      const A = claimsDe(ids.donoA);
+      const p1 = (await como(A, "insert into produtos (nome, custo_centavos, preco_centavos, estoque) values ('Óleo', 2000, 3500, 50) returning id")).rows[0].id;
+      const venda = (itens: object[]) => como(A, "select registrar_venda($1::jsonb)", [JSON.stringify({ itens })]);
+      await venda([{ produto_id: p1, quantidade: 2, preco_unitario_centavos: 3500 }, { descricao: "Mão de obra", quantidade: 1, preco_unitario_centavos: 8000 }]);
+      await venda([{ produto_id: p1, quantidade: 1, preco_unitario_centavos: 3000 }]);
+      const mv = (await como(A, "select relatorio_mais_vendidos(hoje_sp() - 1, hoje_sp() + 1) as r")).rows[0].r;
+      expect(mv).toEqual([
+        { descricao: "Óleo", tipo: "produto", quantidade: 3, receita: 10000, custo: 6000, lucro: 4000, vendas: 2 },
+        { descricao: "Mão de obra", tipo: "avulso", quantidade: 1, receita: 8000, custo: 0, lucro: 8000, vendas: 1 },
+      ]);
+
+      await como(A, "insert into lancamentos (tipo, valor_centavos, data) values ('saida', 5000, hoje_sp())");
+      const lm = (await como(A, "select relatorio_lucro_mensal(hoje_sp(), 3) as r")).rows[0].r;
+      expect(lm).toHaveLength(3);
+      expect(lm.at(-1)).toMatchObject({ receitas: 18000, despesas: 5000, lucro: 13000 });
+      const b = (await como(claimsDe(ids.donoB), "select relatorio_mais_vendidos(hoje_sp() - 1, hoje_sp() + 1) as r")).rows[0].r;
+      expect(b).toEqual([]);
+    });
+  });
 });

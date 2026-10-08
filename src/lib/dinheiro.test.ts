@@ -26,6 +26,7 @@ describe("formatarReais", () => {
     expect(formatarReais(123456)).toBe("R$ 1.234,56");
     expect(formatarReais(0)).toBe("R$ 0,00");
     expect(formatarReais(-990)).toBe("-R$ 9,90");
+    expect(formatarReais(-0)).toBe("R$ 0,00");
   });
 
   it("recusa valor que não é centavo inteiro", () => {

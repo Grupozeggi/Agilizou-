@@ -15,7 +15,8 @@ const formatador = new Intl.NumberFormat("pt-BR", {
 export function formatarReais(centavos: Centavos): string {
   garantirCentavos(centavos);
   // A divisão por 100 aqui é só para exibição; o valor guardado continua inteiro.
-  return formatador.format(centavos / 100).replace(/ /g, " ");
+  // "|| 0" evita o "-R$ 0,00" do zero negativo (-0) do JavaScript.
+  return formatador.format((centavos || 0) / 100).replace(/\u00a0/g, " ");
 }
 
 /**
