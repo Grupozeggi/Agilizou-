@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { exigirCliente } from "@/lib/sessao";
@@ -6,6 +7,8 @@ import { sair } from "@/app/(auth)/acoes";
 
 export default async function LayoutApp({ children }: LayoutProps<"/app">) {
   const { empresa } = await exigirCliente();
+  // Quem ainda não respondeu as 3 perguntas iniciais vai para o onboarding.
+  if (!empresa.onboarding_concluido) redirect("/boas-vindas");
 
   return (
     <div className="flex min-h-dvh flex-col bg-cartao">

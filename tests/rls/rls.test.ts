@@ -292,4 +292,69 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
     await agendar("2026-10-10T14:00:00Z", "2026-10-10T14:30:00Z"); // encostado: pode
     await expect(agendar("2026-10-10T13:30:00Z", "2026-10-10T14:15:00Z")).rejects.toThrow(/agendamentos_sem_conflito/);
   });
+
+  describe("onboarding", () => {
+    const categorias = JSON.stringify([
+      { tipo: "entrada", grupo: "receita", nome: "Serviço" },
+      { tipo: "entrada", grupo: "receita", nome: "Peça" },
+      { tipo: "saida", grupo: "custo", nome: "Peças" },
+      { tipo: "saida", grupo: "despesa", nome: "Aluguel" },
+    ]);
+    const concluir = (sub: string, nome = "Oficina do Zé", saldo = 150000) =>
+      como(claimsDe(sub), "select concluir_onboarding($1, 'mecanica', $2, false, $3::jsonb)", [nome, saldo, categorias]);
+
+    it("salva os dados e cria as categorias do nicho na empresa do usuário", async () => {
+      await concluir(ids.donoA);
+      const e = await db.query(
+        "select nome, nicho, saldo_inicial_centavos, agenda_ativa, onboarding_concluido from empresas where id = $1",
+        [empresaA],
+      );
+      expect(e.rows[0]).toEqual({
+        nome: "Oficina do Zé",
+        nicho: "mecanica",
+        saldo_inicial_centavos: "150000",
+        agenda_ativa: false,
+        onboarding_concluido: true,
+      });
+      const c = await db.query("select tipo, grupo, nome from categorias where empresa_id = $1 order by ordem", [empresaA]);
+      expect(c.rows.map((r) => r.nome)).toEqual(["Serviço", "Peça", "Peças", "Aluguel"]);
+    });
+
+    it("clique duplo não duplica categorias nem sobrescreve os dados", async () => {
+      await concluir(ids.donoA);
+      await concluir(ids.donoA, "Outro nome", 1);
+      const c = await db.query("select count(*)::int as n from categorias where empresa_id = $1", [empresaA]);
+      expect(c.rows[0].n).toBe(4);
+      const e = await db.query("select nome, saldo_inicial_centavos from empresas where id = $1", [empresaA]);
+      expect(e.rows[0]).toEqual({ nome: "Oficina do Zé", saldo_inicial_centavos: "150000" });
+    });
+
+    it("não mexe na empresa de outro usuário", async () => {
+      await concluir(ids.donoA);
+      const b = await db.query("select onboarding_concluido, nome from empresas where id = $1", [empresaB]);
+      expect(b.rows[0]).toEqual({ onboarding_concluido: false, nome: "Clínica B" });
+    });
+
+    it("rejeita nicho inválido e categoria com grupo errado", async () => {
+      await expect(
+        como(claimsDe(ids.donoA), "select concluir_onboarding('X', 'padaria', 0, false, '[]'::jsonb)"),
+      ).rejects.toThrow(/nicho_check/);
+      await expect(
+        como(
+          claimsDe(ids.donoA),
+          `select concluir_onboarding('X', 'outro', 0, false, '[{"tipo":"entrada","grupo":"custo","nome":"Y"}]'::jsonb)`,
+        ),
+      ).rejects.toThrow(/check/);
+    });
+
+    it("visitante sem login não executa o onboarding", async () => {
+      await db.query("savepoint anon2");
+      await db.query("set local role anon");
+      await expect(db.query("select concluir_onboarding('X', 'outro', 0, false, '[]'::jsonb)")).rejects.toThrow(
+        /permission denied/,
+      );
+      await db.query("rollback to savepoint anon2");
+      await db.query("reset role");
+    });
+  });
 });

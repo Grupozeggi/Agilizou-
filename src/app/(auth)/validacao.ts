@@ -30,19 +30,4 @@ export const esquemaRedefinir = z
   .object({ senha, confirmacao: z.string() })
   .refine((d) => d.senha === d.confirmacao, { error: "As senhas não são iguais.", path: ["confirmacao"] });
 
-export type EstadoForm = {
-  erro?: string;
-  sucesso?: string;
-  erros?: Record<string, string>;
-  valores?: Record<string, string>;
-};
-
-/** Primeira mensagem de erro de cada campo. */
-export function errosPorCampo(erro: z.ZodError): Record<string, string> {
-  const r: Record<string, string> = {};
-  for (const issue of erro.issues) {
-    const campo = String(issue.path[0] ?? "form");
-    r[campo] ??= issue.message;
-  }
-  return r;
-}
+export { errosPorCampo, type EstadoForm } from "@/lib/formulario";

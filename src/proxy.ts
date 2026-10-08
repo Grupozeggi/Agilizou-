@@ -70,7 +70,7 @@ export async function proxy(request: NextRequest) {
     return resposta;
   }
 
-  if (caminho === "/app" || caminho.startsWith("/app/")) {
+  if (caminho === "/app" || caminho.startsWith("/app/") || caminho === "/boas-vindas") {
     if (!claims) return redirecionar("/entrar", caminho + request.nextUrl.search);
     // Admin não tem empresa própria; o acesso a clientes é pelo modo suporte.
     if (temPapelAdmin(claims)) return redirecionar("/admin");

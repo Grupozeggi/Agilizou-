@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Sparkles } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, Sparkles, Tags } from "lucide-react";
 import { Cartao } from "@/components/ui";
 import { diasEntre, formatarData, hojeIso } from "@/lib/datas";
 import { exigirCliente } from "@/lib/sessao";
@@ -33,6 +34,14 @@ export default async function Inicio() {
           Em breve aqui: saldo atual, entradas e saídas do mês, lucro e contas vencendo.
         </p>
       </Cartao>
+
+      <Link href="/app/configuracoes/categorias" className="block">
+        <Cartao className="flex items-center gap-3 hover:bg-cartao">
+          <Tags className="size-5 text-royal" strokeWidth={1.75} />
+          <span className="flex-1 font-medium text-tinta">Categorias de entradas e saídas</span>
+          <ChevronRight className="size-5 text-suave" strokeWidth={1.75} />
+        </Cartao>
+      </Link>
     </div>
   );
 }
