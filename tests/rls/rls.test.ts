@@ -81,6 +81,23 @@ async function comoServidor(sql: string, params: unknown[] = []) {
   }
 }
 
+/** Executa SQL como visitante sem login (papel anon), como a página pública do link. */
+async function comoVisitante(sql: string, params: unknown[] = []) {
+  await db.query("savepoint visitante");
+  try {
+    await db.query("set local role anon");
+    await db.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ role: "anon" })]);
+    const r = await db.query(sql, params);
+    await db.query("release savepoint visitante");
+    await limparSessao();
+    return r;
+  } catch (e) {
+    await db.query("rollback to savepoint visitante");
+    await limparSessao();
+    throw e;
+  }
+}
+
 describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
   beforeAll(async () => {
     const adm = new Client({ connectionString: URL_ADMIN });
@@ -802,6 +819,265 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       await como(claimsDe(ids.donoA), "select registrar_acesso()");
       const r = await db.query("select ultimo_acesso_em is not null as ok from empresas where id = $1", [empresaA]);
       expect(r.rows[0].ok).toBe(true);
+    });
+  });
+  describe("link público de agendamento", () => {
+    const A = claimsDe(ids.donoA);
+    const AGENDAR = "select agendar_online($1, $2, $3, $4, $5, $6, $7) as r";
+    let servico: string;
+    let ana: string;
+    /** Próximo dia útil (seg a sáb) daqui a pelo menos 2 dias, às HH:MM de São Paulo. */
+    const horario = async (hora: string, pular = 0) =>
+      (
+        await db.query(
+          `select ((d::date + $1::time) at time zone 'America/Sao_Paulo') as t, d::date::text as dia
+             from generate_series((now() at time zone 'America/Sao_Paulo')::date + 2,
+                                  (now() at time zone 'America/Sao_Paulo')::date + 12, interval '1 day') d
+            where extract(dow from d) between 1 and 6
+            order by d offset $2 limit 1`,
+          [hora, pular],
+        )
+      ).rows[0] as { t: Date; dia: string };
+
+    beforeEach(async () => {
+      await como(A, "update empresas set agenda_ativa = true, agendamento_online = true where id = $1", [empresaA]);
+      servico = (await como(A, "insert into servicos (nome, preco_centavos, duracao_minutos) values ('Corte', 4000, 30) returning id")).rows[0].id;
+      ana = (await como(A, "insert into profissionais (nome) values ('Ana') returning id")).rows[0].id;
+      await como(A, "insert into profissionais (nome) values ('Bia')");
+    });
+
+    it("cada empresa ganha um endereço com o próprio nome, sem repetir", async () => {
+      const r = await db.query("select nome, slug from empresas where id = any($1) order by nome", [[empresaA, empresaB]]);
+      expect(r.rows).toEqual([
+        { nome: "Clínica B", slug: "clinica-b" },
+        { nome: "Oficina A", slug: "oficina-a" },
+      ]);
+      await db.query(`insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), 'c@teste.com', '{"nome_empresa":"Oficina A"}')`);
+      const repetida = await db.query("select slug from empresas where nome = 'Oficina A' order by criado_em, slug");
+      expect(repetida.rows.map((x) => x.slug).sort()).toEqual(["oficina-a", "oficina-a-2"]);
+      expect((await db.query("select gerar_slug('  Barbearia do Zé (demonstração) ') as s, gerar_slug('Zé') as curto, gerar_slug('!!!') as vazio")).rows[0]).toEqual({
+        s: "barbearia-do-ze-demonstracao",
+        curto: "empresa-ze",
+        vazio: "empresa",
+      });
+    });
+
+    it("empresa sem nome ainda não tem endereço; ganha quando o dono dá o nome", async () => {
+      const id = "00000000-0000-0000-0000-0000000000c1";
+      await db.query("insert into auth.users (id, email) values ($1, 'semnome@teste.com')", [id]);
+      const C = claimsDe(id);
+      expect((await como(C, "select slug from empresas")).rows[0].slug).toBeNull();
+      await como(C, "update empresas set nome = 'Salão da Cida'");
+      expect((await como(C, "select slug from empresas")).rows[0].slug).toBe("salao-da-cida");
+    });
+
+    it("trocar o nome não muda o endereço; o dono troca, mas não repete nem inventa formato", async () => {
+      await como(A, "update empresas set nome = 'Oficina do Zé' where id = $1", [empresaA]);
+      expect((await como(A, "select slug from empresas")).rows[0].slug).toBe("oficina-a");
+      await como(A, "update empresas set slug = ' Oficina-do-Ze ' where id = $1", [empresaA]);
+      expect((await como(A, "select slug from empresas")).rows[0].slug).toBe("oficina-do-ze");
+      await expect(como(A, "update empresas set slug = 'clinica-b' where id = $1", [empresaA])).rejects.toThrow(/empresas_slug_unico/);
+      await expect(como(A, "update empresas set slug = 'com espaço' where id = $1", [empresaA])).rejects.toThrow(/empresas_slug_formato/);
+      await expect(como(A, "update empresas set slug = 'ab' where id = $1", [empresaA])).rejects.toThrow(/empresas_slug_formato/);
+    });
+
+    it("visitante só enxerga a página de quem ligou o agendamento online", async () => {
+      expect((await comoVisitante("select agenda_publica('clinica-b') as p")).rows[0].p).toBeNull();
+      expect((await comoVisitante("select agenda_publica('nao-existe') as p")).rows[0].p).toBeNull();
+      const p = (await comoVisitante("select agenda_publica(' Oficina-A ') as p")).rows[0].p;
+      expect(p.empresa).toEqual({ nome: "Oficina A", nicho: "outro", mensagem: null });
+      expect(p.horario).toMatchObject({ abertura: "08:00", fechamento: "18:00", dias: [1, 2, 3, 4, 5, 6], dias_adiante: 30, antecedencia_horas: 1, datas_fechadas: [] });
+      expect(p.profissionais.map((x: { nome: string }) => x.nome)).toEqual(["Ana", "Bia"]);
+      expect(p.servicos).toEqual([{ id: servico, nome: "Corte", duracao_minutos: 30, preco_centavos: 4000 }]);
+      expect(p.ocupados).toEqual([]);
+      // continua sem ler nenhuma tabela
+      await expect(comoVisitante("select * from empresas")).rejects.toThrow(/permission denied/);
+      await expect(comoVisitante("select * from agendamentos")).rejects.toThrow(/permission denied/);
+      await expect(comoVisitante("select * from clientes")).rejects.toThrow(/permission denied/);
+    });
+
+    it("some com a agenda desligada, o link desligado ou a conta bloqueada; preço pode ficar escondido", async () => {
+      const visivel = async () => (await comoVisitante("select agenda_publica('oficina-a') as p")).rows[0].p;
+      await como(A, "update empresas set agendamento_mostrar_precos = false where id = $1", [empresaA]);
+      expect((await visivel()).servicos[0].preco_centavos).toBeNull();
+      await como(A, "update empresas set agenda_ativa = false where id = $1", [empresaA]);
+      expect(await visivel()).toBeNull();
+      await como(A, "update empresas set agenda_ativa = true, agendamento_online = false where id = $1", [empresaA]);
+      expect(await visivel()).toBeNull();
+      await como(A, "update empresas set agendamento_online = true where id = $1", [empresaA]);
+      await db.query("update empresas set teste_ate = now() - interval '1 minute' where id = $1", [empresaA]);
+      expect(await visivel()).toBeNull();
+      const { t } = await horario("10:00");
+      await expect(comoVisitante(AGENDAR, ["oficina-a", servico, ana, t, "Maria", "5511999998888", null])).rejects.toThrow(/não está disponível/);
+    });
+
+    it("visitante marca: nasce o cliente e o horário entra direto na agenda do dono", async () => {
+      const { t } = await horario("10:00");
+      const r = (await comoVisitante(AGENDAR, ["oficina-a", servico, ana, t, "  Maria Souza ", "5511999998888", "Primeira vez"])).rows[0].r;
+      expect(r).toMatchObject({ empresa: "Oficina A", profissional: "Ana", servico: "Corte", empresa_id: empresaA });
+      expect(new Date(r.fim).getTime() - new Date(r.inicio).getTime()).toBe(30 * 60_000);
+
+      const ag = await como(A, "select a.status, a.origem, a.observacao, a.profissional_id, c.nome, c.whatsapp from agendamentos a join clientes c on c.id = a.cliente_id");
+      expect(ag.rows).toEqual([{ status: "agendado", origem: "link", observacao: "Primeira vez", profissional_id: ana, nome: "Maria Souza", whatsapp: "5511999998888" }]);
+      // a outra empresa não vê nada disso
+      expect((await como(claimsDe(ids.donoB), "select count(*)::int n from agendamentos")).rows[0].n).toBe(0);
+      expect((await como(claimsDe(ids.donoB), "select count(*)::int n from clientes")).rows[0].n).toBe(0);
+      // o horário aparece como ocupado na página, sem dizer de quem é
+      const p = (await comoVisitante("select agenda_publica('oficina-a') as p")).rows[0].p;
+      expect(p.ocupados).toHaveLength(1);
+      expect(Object.keys(p.ocupados[0]).sort()).toEqual(["fim", "inicio", "profissional"]);
+      expect(p.ocupados[0].profissional).toBe(ana);
+    });
+
+    it("mesmo WhatsApp reaproveita o cadastro e não troca o nome que o dono salvou", async () => {
+      const cli = (await como(A, "insert into clientes (nome, whatsapp) values ('Dona Maria', '5511999998888') returning id")).rows[0].id;
+      const { t } = await horario("11:00");
+      await comoVisitante(AGENDAR, ["oficina-a", servico, ana, t, "Maria", "5511999998888", null]);
+      const r = await como(A, "select c.id, c.nome from agendamentos a join clientes c on c.id = a.cliente_id");
+      expect(r.rows).toEqual([{ id: cli, nome: "Dona Maria" }]);
+      expect((await como(A, "select count(*)::int n from clientes")).rows[0].n).toBe(1);
+    });
+
+    it("não deixa dois clientes no mesmo horário do mesmo profissional", async () => {
+      const { t } = await horario("14:00");
+      const depois = new Date(t.getTime() + 15 * 60_000);
+      await comoVisitante(AGENDAR, ["oficina-a", servico, ana, t, "Maria", "5511999998888", null]);
+      await expect(comoVisitante(AGENDAR, ["oficina-a", servico, ana, t, "João", "5511988887777", null])).rejects.toThrow(/acabou de ser ocupado/);
+      await expect(comoVisitante(AGENDAR, ["oficina-a", servico, ana, depois, "João", "5511988887777", null])).rejects.toThrow(/acabou de ser ocupado/);
+      // a recusa não deixa cliente "fantasma" cadastrado
+      expect((await como(A, "select count(*)::int n from clientes")).rows[0].n).toBe(1);
+    });
+
+    it("sem preferência de profissional: pega quem estiver livre; lotado, recusa", async () => {
+      const { t } = await horario("15:00");
+      const quem = async (nome: string, zap: string) => (await comoVisitante(AGENDAR, ["oficina-a", servico, null, t, nome, zap, null])).rows[0].r.profissional;
+      expect(await quem("Maria", "5511999998888")).toBe("Ana");
+      expect(await quem("João", "5511988887777")).toBe("Bia");
+      await expect(quem("Pedro", "5511977776666")).rejects.toThrow(/acabou de ser ocupado/);
+    });
+
+    it("recusa dia fechado, data bloqueada, fora do expediente, passado e longe demais", async () => {
+      const ok = await horario("10:00");
+      const tentar = (t: Date | string) => comoVisitante(AGENDAR, ["oficina-a", servico, ana, t, "Maria", "5511999998888", null]);
+      const sp = async (expr: string) => (await db.query(`select ((${expr}) at time zone 'America/Sao_Paulo') as t`)).rows[0].t as Date;
+      const hoje = "(now() at time zone 'America/Sao_Paulo')::date";
+
+      // domingo (a empresa atende de seg a sáb)
+      const domingo = await sp(`(select d::date from generate_series(${hoje} + 2, ${hoje} + 9, interval '1 day') d where extract(dow from d) = 0 limit 1) + time '10:00'`);
+      await expect(tentar(domingo)).rejects.toThrow(/Não há atendimento nesse dia/);
+      // data que o dono fechou (feriado, folga)
+      await como(A, "update empresas set datas_fechadas = array[$2::date] where id = $1", [empresaA, ok.dia]);
+      await expect(tentar(ok.t)).rejects.toThrow(/Não há atendimento nesse dia/);
+      await como(A, "update empresas set datas_fechadas = '{}' where id = $1", [empresaA]);
+      // antes de abrir e terminando depois de fechar (17:45 + 30 min passa das 18:00)
+      await expect(tentar((await horario("07:45")).t)).rejects.toThrow(/fora do período/);
+      await expect(tentar((await horario("17:45")).t)).rejects.toThrow(/fora do período/);
+      // horário quebrado
+      await expect(tentar((await horario("10:07")).t)).rejects.toThrow(/Horário inválido/);
+      // passado e além da janela de dias
+      await expect(tentar(await sp(`${hoje} - 1 + time '10:00'`))).rejects.toThrow(/já passou/);
+      await como(A, "update empresas set agendamento_dias_adiante = 1 where id = $1", [empresaA]);
+      await expect(tentar(ok.t)).rejects.toThrow(/ainda não está aberta/);
+      await como(A, "update empresas set agendamento_dias_adiante = 30 where id = $1", [empresaA]);
+      // no fim, o horário certo passa
+      await tentar(ok.t);
+    });
+
+    it("respeita a antecedência mínima escolhida pelo dono", async () => {
+      await como(A, "update empresas set agendamento_antecedencia_horas = 72, horario_abertura = '00:00', horario_fechamento = '23:59', dias_funcionamento = '{0,1,2,3,4,5,6}' where id = $1", [empresaA]);
+      const emDoisDias = (await db.query("select date_trunc('hour', now() + interval '48 hours') as t")).rows[0].t;
+      await expect(comoVisitante(AGENDAR, ["oficina-a", servico, ana, emDoisDias, "Maria", "5511999998888", null])).rejects.toThrow(/muito em cima da hora/);
+    });
+
+    it("recusa serviço e profissional de outra empresa, nome vazio e WhatsApp inválido", async () => {
+      const B = claimsDe(ids.donoB);
+      const servicoB = (await como(B, "insert into servicos (nome) values ('Limpeza') returning id")).rows[0].id;
+      const profB = (await como(B, "insert into profissionais (nome) values ('Dr. Caio') returning id")).rows[0].id;
+      const { t } = await horario("09:00");
+      const tentar = (s: string | null, p: string | null, nome: string, zap: string) => comoVisitante(AGENDAR, ["oficina-a", s, p, t, nome, zap, null]);
+      await expect(tentar(servicoB, ana, "Maria", "5511999998888")).rejects.toThrow(/Serviço não encontrado/);
+      await expect(tentar(servico, profB, "Maria", "5511999998888")).rejects.toThrow(/Profissional não encontrado/);
+      await expect(tentar(null, ana, "Maria", "5511999998888")).rejects.toThrow(/Escolha o serviço/);
+      await expect(tentar(servico, ana, " ", "5511999998888")).rejects.toThrow(/Digite o seu nome/);
+      await expect(tentar(servico, ana, "Maria", "(11) 99999-8888")).rejects.toThrow(/WhatsApp inválido/);
+      expect((await como(A, "select count(*)::int n from agendamentos")).rows[0].n).toBe(0);
+      expect((await como(B, "select count(*)::int n from agendamentos")).rows[0].n).toBe(0);
+    });
+
+    it("empresa sem serviço cadastrado: marca um atendimento de 30 minutos", async () => {
+      await como(A, "update servicos set deleted_at = now() where id = $1", [servico]);
+      const { t } = await horario("16:00");
+      const r = (await comoVisitante(AGENDAR, ["oficina-a", null, ana, t, "Maria", "5511999998888", null])).rows[0].r;
+      expect(r.servico).toBeNull();
+      expect(new Date(r.fim).getTime() - new Date(r.inicio).getTime()).toBe(30 * 60_000);
+    });
+
+    it("o mesmo WhatsApp não enche a agenda: no máximo 3 horários futuros", async () => {
+      for (const h of ["09:00", "10:00", "11:00"]) {
+        await comoVisitante(AGENDAR, ["oficina-a", servico, ana, (await horario(h)).t, "Maria", "5511999998888", null]);
+      }
+      await expect(comoVisitante(AGENDAR, ["oficina-a", servico, ana, (await horario("12:00")).t, "Maria", "5511999998888", null])).rejects.toThrow(/já tem horários marcados/);
+      // outra pessoa continua marcando normalmente
+      await comoVisitante(AGENDAR, ["oficina-a", servico, ana, (await horario("12:00")).t, "João", "5511988887777", null]);
+    });
+
+    it("visitante não chama as funções internas do endereço", async () => {
+      await expect(comoVisitante("select slug_livre('oficina-a', null)")).rejects.toThrow(/permission denied/);
+      await expect(comoVisitante("select gerar_slug('x')")).rejects.toThrow(/permission denied/);
+      await expect(como(A, "select slug_livre('oficina-a', null)")).rejects.toThrow(/permission denied/);
+    });
+  });
+
+  describe("perguntas do cadastro e pedido de marketing", () => {
+    const A = claimsDe(ids.donoA);
+    const B = claimsDe(ids.donoB);
+
+    it("o dono responde e só ele (e o admin) enxerga", async () => {
+      await como(A, "insert into perfil_negocio (tempo_negocio, equipe, faturamento, controle_caixa, dificuldade, origem) values ('3_a_5', '2_a_5', '15k_a_30k', 'planilha', 'saber_lucro', 'instagram')");
+      const meu = await como(A, "select empresa_id, tempo_negocio, quer_marketing, marketing_pedido_em from perfil_negocio");
+      expect(meu.rows).toEqual([{ empresa_id: empresaA, tempo_negocio: "3_a_5", quer_marketing: false, marketing_pedido_em: null }]);
+      expect((await como(B, "select count(*)::int n from perfil_negocio")).rows[0].n).toBe(0);
+      expect((await como(claimsAdmin(), "select count(*)::int n from perfil_negocio")).rows[0].n).toBe(1);
+      await expect(comoVisitante("select * from perfil_negocio")).rejects.toThrow(/permission denied/);
+    });
+
+    it("ninguém grava o perfil de outra empresa nem inventa resposta fora da lista", async () => {
+      await expect(como(A, "insert into perfil_negocio (empresa_id, equipe) values ($1, 'so_eu')", [empresaB])).rejects.toThrow(/row-level security/);
+      await expect(como(A, "insert into perfil_negocio (faturamento) values ('um_milhao')")).rejects.toThrow(/perfil_negocio_faturamento_check/);
+      await como(B, "insert into perfil_negocio (equipe) values ('so_eu')");
+      expect((await como(A, "update perfil_negocio set equipe = 'mais_10' where empresa_id = $1", [empresaB])).rowCount).toBe(0);
+      await expect(como(A, "delete from perfil_negocio")).rejects.toThrow(/permission denied/);
+    });
+
+    it("pedido de marketing guarda a data do pedido e aparece para o admin", async () => {
+      await como(A, "insert into perfil_negocio (quer_marketing, whatsapp_contato) values (true, '5543999990000')");
+      const pedido = (await como(A, "select marketing_pedido_em from perfil_negocio")).rows[0].marketing_pedido_em;
+      expect(pedido).not.toBeNull();
+      // responder outra pergunta depois não mexe na data do pedido
+      await como(A, "update perfil_negocio set equipe = 'so_eu', marketing_pedido_em = now() + interval '1 day'");
+      expect((await como(A, "select marketing_pedido_em from perfil_negocio")).rows[0].marketing_pedido_em).toEqual(pedido);
+
+      const lista = await como(claimsAdmin(), "select nome, quer_marketing, whatsapp_contato, slug, agendamento_online from admin_empresas('oficina')");
+      expect(lista.rows).toEqual([{ nome: "Oficina A", quer_marketing: true, whatsapp_contato: "5543999990000", slug: "oficina-a", agendamento_online: false }]);
+      const painel = (await como(claimsAdmin(), "select admin_painel() as p")).rows[0].p;
+      expect(painel).toMatchObject({ querem_marketing: 1, agendamento_online: 0, testes_acabando: 0, testes_vencidos: 0 });
+
+      // desistiu: some da lista de pedidos
+      await como(A, "update perfil_negocio set quer_marketing = false");
+      expect((await como(A, "select marketing_pedido_em from perfil_negocio")).rows[0].marketing_pedido_em).toBeNull();
+    });
+
+    it("conta em somente leitura ainda consegue pedir contato", async () => {
+      await db.query("update empresas set status_assinatura = 'inadimplente' where id = $1", [empresaA]);
+      await como(A, "insert into perfil_negocio (quer_marketing) values (true)");
+      expect((await como(A, "select quer_marketing from perfil_negocio")).rows[0].quer_marketing).toBe(true);
+    });
+
+    it("painel conta testes acabando e vencidos", async () => {
+      await db.query("update empresas set teste_ate = now() + interval '2 days' where id = $1", [empresaA]);
+      await db.query("update empresas set teste_ate = now() - interval '1 day' where id = $1", [empresaB]);
+      const painel = (await como(claimsAdmin(), "select admin_painel() as p")).rows[0].p;
+      expect(painel).toMatchObject({ testes_acabando: 1, testes_vencidos: 1 });
     });
   });
 });
