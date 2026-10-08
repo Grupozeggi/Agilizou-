@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, CalendarClock, Home, LayoutGrid, Plus, ShoppingCart, X, type LucideIcon } from "lucide-react";
+import { ArrowDownLeft, Bell, ArrowUpRight, CalendarClock, Home, LayoutGrid, Plus, ShoppingCart, X, type LucideIcon } from "lucide-react";
 
 type Item = { href: string; rotulo: string; icone: LucideIcon; exato?: boolean };
 
 const ESQUERDA: Item[] = [
   { href: "/app", rotulo: "Início", icone: Home, exato: true },
-  { href: "/app/vendas", rotulo: "Vendas", icone: ShoppingCart },
+  { href: "/app/hoje", rotulo: "Hoje", icone: CalendarClock },
 ];
 const DIREITA: Item[] = [
-  { href: "/app/contas", rotulo: "Contas", icone: CalendarClock },
+  { href: "/app/vendas", rotulo: "Vendas", icone: ShoppingCart },
   { href: "/app/menu", rotulo: "Menu", icone: LayoutGrid },
 ];
 
@@ -22,6 +22,7 @@ const ACOES_PADRAO: AcaoRapida[] = [
   { href: "/app/vendas/nova", rotulo: "Venda", icone: "venda" },
   { href: "/app/lancamentos/novo?tipo=entrada", rotulo: "Entrada", icone: "entrada" },
   { href: "/app/lancamentos/novo?tipo=saida", rotulo: "Saída", icone: "saida" },
+  { href: "/app/lembretes", rotulo: "Lembrete", icone: "lembrete" },
 ];
 
 const ICONES: Record<AcaoRapida["icone"], { icone: LucideIcon; cor: string }> = {
@@ -29,7 +30,7 @@ const ICONES: Record<AcaoRapida["icone"], { icone: LucideIcon; cor: string }> = 
   entrada: { icone: ArrowDownLeft, cor: "text-entrada" },
   saida: { icone: ArrowUpRight, cor: "text-saida" },
   agenda: { icone: CalendarClock, cor: "text-royal" },
-  lembrete: { icone: CalendarClock, cor: "text-dourado" },
+  lembrete: { icone: Bell, cor: "text-dourado" },
 };
 
 /** Barra inferior do app (mobile first) com o botão "+" no meio. */

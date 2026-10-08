@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, CreditCard, LogOut, Tags } from "lucide-react";
+import { BellRing, ChevronRight, CreditCard, LogOut, Tags } from "lucide-react";
 import { sair } from "@/app/(auth)/acoes";
 import { exigirCliente } from "@/lib/sessao";
 
@@ -10,6 +10,7 @@ export default async function Configuracoes() {
   const { empresa, claims } = await exigirCliente();
   const itens = [
     { href: "/app/configuracoes/categorias", rotulo: "Categorias", icone: Tags },
+    { href: "/app/configuracoes/avisos", rotulo: "Avisos de vencimento", icone: BellRing },
     { href: "/app/assinatura", rotulo: "Assinatura", icone: CreditCard },
   ];
 

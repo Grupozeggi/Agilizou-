@@ -3,14 +3,19 @@ import { Voltar } from "@/components/voltar";
 import { hojeIso } from "@/lib/datas";
 import { usoLancamentos } from "@/lib/limites";
 import { exigirCliente } from "@/lib/sessao";
-import { carregarCategorias } from "../dados";
+import { carregarCategorias, carregarClientes } from "../dados";
 import { FormLancamento } from "../form-lancamento";
 
 export const metadata: Metadata = { title: "Novo lançamento" };
 
 export default async function NovoLancamento({ searchParams }: PageProps<"/app/lancamentos/novo">) {
   const { supabase, empresa } = await exigirCliente();
-  const [categorias, uso, p] = await Promise.all([carregarCategorias(supabase), usoLancamentos(supabase, empresa), searchParams]);
+  const [categorias, uso, p, clientes] = await Promise.all([
+    carregarCategorias(supabase),
+    usoLancamentos(supabase, empresa),
+    searchParams,
+    carregarClientes(supabase),
+  ]);
 
   return (
     <div className="space-y-4">
@@ -21,6 +26,7 @@ export default async function NovoLancamento({ searchParams }: PageProps<"/app/l
         hoje={hojeIso()}
         tipoInicial={p.tipo === "saida" ? "saida" : "entrada"}
         avisoLimite={uso.mensagem}
+        clientes={clientes}
       />
     </div>
   );

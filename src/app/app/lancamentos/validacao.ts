@@ -48,6 +48,7 @@ const camposComuns = {
   ),
   descricao: z.preprocess(vazioParaUndefined, z.string().trim().max(140, { error: "Use no máximo 140 caracteres." }).optional()),
   observacao: z.preprocess(vazioParaUndefined, z.string().trim().max(500, { error: "Use no máximo 500 caracteres." }).optional()),
+  cliente_id: z.preprocess(vazioParaUndefined, z.uuid({ error: "Cliente inválido." }).optional()),
 };
 
 export const esquemaNovoLancamento = z

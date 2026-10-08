@@ -25,7 +25,10 @@ export type LancamentoEditavel = {
   parcela_numero: number | null;
   parcela_total: number | null;
   recorrente: boolean;
+  cliente_id?: string | null;
 };
+
+export type ClienteOpcao = { id: string; nome: string };
 
 /**
  * Lançar em 3 toques: digitar o valor, tocar na categoria, tocar em Salvar.
@@ -37,7 +40,9 @@ export function FormLancamento({
   tipoInicial = "entrada",
   lancamento,
   avisoLimite,
+  clientes = [],
 }: {
+  clientes?: ClienteOpcao[];
   categorias: CategoriaOpcao[];
   hoje: string;
   tipoInicial?: "entrada" | "saida";
@@ -91,6 +96,7 @@ export function FormLancamento({
         hoje={hoje}
         tipoInicial={lancamento?.tipo ?? tipoInicial}
         lancamento={lancamento}
+        clientes={clientes}
       />
       {lancamento && <Excluir lancamento={lancamento} />}
     </div>
@@ -105,7 +111,9 @@ function Campos({
   hoje,
   tipoInicial,
   lancamento,
+  clientes,
 }: {
+  clientes: ClienteOpcao[];
   acao: (f: FormData) => void;
   salvando: boolean;
   estado: EstadoForm;
@@ -254,6 +262,23 @@ function Campos({
           {erros.forma_pagamento && <p className="mt-1 text-sm text-saida">{erros.forma_pagamento}</p>}
         </fieldset>
 
+        {clientes.length > 0 && (
+          <label className="block text-sm">
+            <span className="mb-1.5 block font-medium text-tinta">{ehEntrada ? "Cliente (opcional)" : "Cliente/fornecedor (opcional)"}</span>
+            <select
+              name="cliente_id"
+              defaultValue={lancamento?.cliente_id ?? ""}
+              className="h-12 w-full rounded-xl border border-borda bg-white px-3 text-base"
+            >
+              <option value="">—</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <Campo
           rotulo="Descrição (opcional)"
           nome="descricao"

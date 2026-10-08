@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronRight, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronRight, ListChecks, Sparkles } from "lucide-react";
 import { GraficoEntradasSaidas } from "@/components/grafico-barras";
 import { Cartao } from "@/components/ui";
 import { dataSp, diasEntre, formatarData } from "@/lib/datas";
@@ -30,7 +30,7 @@ export default async function Inicio({ searchParams }: PageProps<"/app">) {
   const { empresa, supabase } = await exigirCliente();
   const hoje = hojeIso();
   const periodo = resolverPeriodo(await searchParams, hoje);
-  const r = await carregarResumo(supabase, periodo.inicio, periodo.fim);
+  const [r, paraHoje] = await Promise.all([carregarResumo(supabase, periodo.inicio, periodo.fim), contarParaHoje(supabase, hoje)]);
   const resultado = lucro(r);
   const margem = percentual(resultado, r.receitas);
   const fimTeste = dataSp(empresa.teste_ate);
@@ -48,6 +48,21 @@ export default async function Inicio({ searchParams }: PageProps<"/app">) {
             (até {formatarData(fimTeste)})
           </span>
           <ChevronRight className="size-4 text-suave" />
+        </Link>
+      )}
+
+      {paraHoje > 0 && (
+        <Link href="/app/hoje" className="flex items-center gap-3 rounded-cartao bg-white p-4 shadow-suave ring-1 ring-dourado/50">
+          <span className="grid size-10 place-items-center rounded-full bg-dourado/10 text-dourado">
+            <ListChecks className="size-5" strokeWidth={1.75} />
+          </span>
+          <span className="flex-1">
+            <span className="block font-semibold text-tinta">
+              {paraHoje === 1 ? "1 coisa para hoje" : `${paraHoje} coisas para hoje`}
+            </span>
+            <span className="block text-sm text-suave">Contas, cobranças, lembretes e atendimentos</span>
+          </span>
+          <ChevronRight className="size-5 text-suave" />
         </Link>
       )}
 
@@ -200,4 +215,21 @@ function LinhaDre({ rotulo, ajuda, valor, cor, forte }: { rotulo: string; ajuda?
       <dd className={`numero ${forte ? "text-base font-semibold" : ""} ${cor}`}>{formatarReais(valor)}</dd>
     </div>
   );
+}
+
+/** Quantas coisas o dono tem para fazer hoje (inclui atrasadas). */
+async function contarParaHoje(supabase: Awaited<ReturnType<typeof exigirCliente>>["supabase"], hoje: string) {
+  const contar = (r: { count: number | null }) => r.count ?? 0;
+  const [contas, lembretes, atendimentos] = await Promise.all([
+    supabase.from("lancamentos").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "pendente").lte("data", hoje),
+    supabase.from("lembretes").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("feito", false).lte("data", hoje),
+    supabase
+      .from("agendamentos")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .in("status", ["agendado", "confirmado"])
+      .gte("inicio", `${hoje}T00:00:00-03:00`)
+      .lte("inicio", `${hoje}T23:59:59-03:00`),
+  ]);
+  return contar(contas) + contar(lembretes) + contar(atendimentos);
 }

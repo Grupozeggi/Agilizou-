@@ -56,6 +56,7 @@ export async function criarLancamento(_: EstadoForm, form: FormData): Promise<Es
       forma_pagamento: d.forma_pagamento ?? null,
       descricao: d.descricao ?? null,
       observacao: d.observacao ?? null,
+      cliente_id: d.cliente_id ?? null,
       grupo_id: grupo,
       parcela_numero: grupo ? o.numero : null,
       parcela_total: grupo ? o.total : null,
@@ -103,6 +104,7 @@ export async function editarLancamento(_: EstadoForm, form: FormData): Promise<E
       forma_pagamento: d.forma_pagamento ?? null,
       descricao: d.descricao ?? null,
       observacao: d.observacao ?? null,
+      cliente_id: d.cliente_id ?? null,
     })
     .eq("id", d.id);
   if (error) return erroDoBanco("editar", error);
