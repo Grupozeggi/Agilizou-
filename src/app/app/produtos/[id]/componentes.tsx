@@ -7,6 +7,7 @@ import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { formatarQuantidade } from "@/lib/estoque";
 import { FORMAS_PAGAMENTO } from "@/lib/lancamentos";
 import { excluirProduto, movimentarEstoque } from "../acoes";
+import { Formulario } from "@/components/formulario";
 
 type Tipo = "entrada" | "perda" | "ajuste";
 
@@ -53,7 +54,7 @@ export function Movimentar({
           </button>
         ))}
       </div>
-      <form key={versao} action={acao} className="mt-4 space-y-4">
+      <Formulario key={versao} acao={acao} className="mt-4 space-y-4">
         {estado.sucesso && <Aviso tipo="sucesso">{estado.sucesso}</Aviso>}
         {estado.erro && <Aviso>{estado.erro}</Aviso>}
         <input type="hidden" name="produto_id" value={produtoId} />
@@ -109,7 +110,7 @@ export function Movimentar({
         <Botao type="submit" disabled={salvando}>
           {salvando ? "Salvando..." : "Registrar"}
         </Botao>
-      </form>
+      </Formulario>
     </Cartao>
   );
 }
@@ -125,7 +126,7 @@ export function ExcluirProduto({ id, nome }: { id: string; nome: string }) {
     );
   }
   return (
-    <form action={acao} className="space-y-3 rounded-xl border border-saida/30 bg-saida/5 p-4">
+    <Formulario acao={acao} className="space-y-3 rounded-xl border border-saida/30 bg-saida/5 p-4">
       <input type="hidden" name="id" value={id} />
       <p className="font-semibold text-tinta">Excluir “{nome}”?</p>
       <p className="text-sm text-suave">As vendas antigas continuam no histórico.</p>
@@ -138,6 +139,6 @@ export function ExcluirProduto({ id, nome }: { id: string; nome: string }) {
           {excluindo ? "Excluindo..." : "Excluir"}
         </Botao>
       </div>
-    </form>
+    </Formulario>
   );
 }

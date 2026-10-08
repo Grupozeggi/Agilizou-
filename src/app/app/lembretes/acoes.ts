@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { paraCentavos } from "@/lib/dinheiro";
 import { errosPorCampo, type EstadoForm } from "@/lib/formulario";
-import { exigirCliente } from "@/lib/sessao";
+import { exigirEscrita } from "@/lib/sessao";
 import { dadosDoForm } from "../lancamentos/validacao";
 
 const vazio = (v: unknown) => (v === "" || v === null ? undefined : v);
@@ -39,7 +39,8 @@ export async function criarLembrete(_: EstadoForm, form: FormData): Promise<Esta
   const r = esquema.safeParse(dadosDoForm(form));
   if (!r.success) return { erros: errosPorCampo(r.error) };
   const d = r.data;
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error } = await supabase.from("lembretes").insert({
     titulo: d.titulo,
     data: d.data,
@@ -59,7 +60,8 @@ export async function criarLembrete(_: EstadoForm, form: FormData): Promise<Esta
 /** Um toque: marca ou desmarca como feito. */
 export async function marcarLembrete(id: string, feito: boolean): Promise<EstadoForm> {
   if (!z.uuid().safeParse(id).success) return { erro: "Lembrete inválido." };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error } = await supabase
     .from("lembretes")
     .update({ feito, feito_em: feito ? new Date().toISOString() : null })
@@ -72,7 +74,8 @@ export async function marcarLembrete(id: string, feito: boolean): Promise<Estado
 
 export async function excluirLembrete(id: string): Promise<EstadoForm> {
   if (!z.uuid().safeParse(id).success) return { erro: "Lembrete inválido." };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error } = await supabase.from("lembretes").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   if (error) return { erro: "Não foi possível excluir." };
   revalidar();

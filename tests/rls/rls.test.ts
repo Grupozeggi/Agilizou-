@@ -50,13 +50,19 @@ async function como(claims: Claims, sql: string, params: unknown[] = [], headers
     await db.query("select set_config('request.headers', $1, true)", [JSON.stringify(headers)]);
     const r = await db.query(sql, params);
     await db.query("release savepoint como");
-    await db.query("reset role");
+    await limparSessao();
     return r;
   } catch (e) {
     await db.query("rollback to savepoint como");
-    await db.query("reset role");
+    await limparSessao();
     throw e;
   }
+}
+
+/** Volta a ser o "dono do banco" sem JWT (como o SQL Editor do Supabase). */
+async function limparSessao() {
+  await db.query("reset role");
+  await db.query("select set_config('request.jwt.claims', '', true), set_config('request.headers', '', true)");
 }
 
 async function comoServidor(sql: string, params: unknown[] = []) {
@@ -66,11 +72,11 @@ async function comoServidor(sql: string, params: unknown[] = []) {
     await db.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ role: "service_role" })]);
     const r = await db.query(sql, params);
     await db.query("release savepoint srv");
-    await db.query("reset role");
+    await limparSessao();
     return r;
   } catch (e) {
     await db.query("rollback to savepoint srv");
-    await db.query("reset role");
+    await limparSessao();
     throw e;
   }
 }
@@ -720,6 +726,36 @@ describe.skipIf(!URL_ADMIN)("RLS: isolamento entre empresas", () => {
       expect(lm.at(-1)).toMatchObject({ receitas: 18000, despesas: 5000, lucro: 13000 });
       const b = (await como(claimsDe(ids.donoB), "select relatorio_mais_vendidos(hoje_sp() - 1, hoje_sp() + 1) as r")).rows[0].r;
       expect(b).toEqual([]);
+    });
+  });
+
+  describe("assinatura: somente leitura", () => {
+    it("teste vencido ou inadimplente: lê tudo, não grava nada; ativo volta a gravar", async () => {
+      const A = claimsDe(ids.donoA);
+      const lanc = await como(A, "insert into lancamentos (tipo, valor_centavos) values ('entrada', 1000) returning id");
+      const id = lanc.rows[0].id;
+
+      await db.query("update empresas set teste_ate = now() - interval '1 minute' where id = $1", [empresaA]);
+      expect((await como(A, "select count(*)::int n from lancamentos")).rows[0].n).toBe(1); // continua lendo
+      await expect(como(A, "insert into lancamentos (tipo, valor_centavos) values ('entrada', 1)")).rejects.toThrow(/row-level security/);
+      const upd = await como(A, "update lancamentos set valor_centavos = 2 where id = $1", [id]);
+      expect(upd.rowCount).toBe(0);
+      await expect(como(A, "select registrar_venda($1::jsonb)", [JSON.stringify({ itens: [{ descricao: "x", quantidade: 1, preco_unitario_centavos: 100 }] })])).rejects.toThrow(
+        /row-level security/,
+      );
+      expect((await como(A, "update empresas set nome = 'Outro' where id = $1", [empresaA])).rowCount).toBe(0);
+
+      await db.query("update empresas set status_assinatura = 'inadimplente' where id = $1", [empresaA]);
+      await expect(como(A, "insert into clientes (nome) values ('Ana')")).rejects.toThrow(/row-level security/);
+
+      // pagamento confirmado (feito pelo servidor/webhook)
+      await comoServidor("update empresas set status_assinatura = 'ativo' where id = $1", [empresaA]);
+      await como(A, "insert into clientes (nome) values ('Ana')");
+
+      // admin com 2FA continua podendo corrigir dados de conta bloqueada
+      await db.query("update empresas set status_assinatura = 'suspenso' where id = $1", [empresaA]);
+      const adm = await como(claimsAdmin(), "update lancamentos set valor_centavos = 3 where id = $1", [id]);
+      expect(adm.rowCount).toBe(1);
     });
   });
 });

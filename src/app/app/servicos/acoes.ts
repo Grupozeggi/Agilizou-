@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { paraCentavos } from "@/lib/dinheiro";
 import { errosPorCampo, type EstadoForm } from "@/lib/formulario";
-import { exigirCliente } from "@/lib/sessao";
+import { exigirEscrita } from "@/lib/sessao";
 import { dadosDoForm } from "../lancamentos/validacao";
 
 const centavos = (rotulo: string) =>
@@ -33,7 +33,8 @@ export async function salvarServico(_: EstadoForm, form: FormData): Promise<Esta
   const r = esquema.safeParse(dadosDoForm(form));
   if (!r.success) return { erros: errosPorCampo(r.error) };
   const { id, nome, preco, custo, duracao_minutos } = r.data;
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const dados = { nome, preco_centavos: preco, custo_centavos: custo, duracao_minutos };
   const { error } = id
     ? await supabase.from("servicos").update(dados).eq("id", id).is("deleted_at", null)
@@ -49,7 +50,8 @@ export async function salvarServico(_: EstadoForm, form: FormData): Promise<Esta
 export async function excluirServico(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const id = String(form.get("id") ?? "");
   if (!z.uuid().safeParse(id).success) return { erro: "Serviço inválido." };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error } = await supabase.from("servicos").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   if (error) return { erro: "Não foi possível excluir." };
   revalidatePath("/app/servicos");

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { redefinirSenha } from "../acoes";
+import { Formulario } from "@/components/formulario";
 
 export function FormRedefinir() {
   const [estado, acao, enviando] = useActionState(redefinirSenha, {});
@@ -10,7 +11,7 @@ export function FormRedefinir() {
   return (
     <Cartao>
       <h1 className="text-2xl">Criar nova senha</h1>
-      <form action={acao} className="mt-6 space-y-4" noValidate>
+      <Formulario acao={acao} className="mt-6 space-y-4" noValidate>
         {estado.erro && <Aviso>{estado.erro}</Aviso>}
         <Campo
           rotulo="Nova senha"
@@ -32,7 +33,7 @@ export function FormRedefinir() {
         <Botao type="submit" disabled={enviando}>
           {enviando ? "Salvando..." : "Salvar nova senha"}
         </Botao>
-      </form>
+      </Formulario>
     </Cartao>
   );
 }

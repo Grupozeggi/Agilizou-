@@ -7,6 +7,7 @@ import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { formatarReais } from "@/lib/dinheiro";
 import type { EstadoForm } from "@/lib/formulario";
 import { excluirServico, salvarServico } from "./acoes";
+import { Formulario } from "@/components/formulario";
 
 export type Servico = { id: string; nome: string; preco_centavos: number; custo_centavos: number; duracao_minutos: number };
 
@@ -34,8 +35,8 @@ export function ListaServicos({ servicos }: { servicos: Servico[] }) {
                 <button type="button" onClick={() => setEditando(s.id)} className="grid size-11 place-items-center text-suave" aria-label={`Editar ${s.nome}`}>
                   <Pencil className="size-4" />
                 </button>
-                <form
-                  action={excluir}
+                <Formulario
+                  acao={excluir}
                   onSubmit={(e) => {
                     if (!confirm(`Excluir o serviço "${s.nome}"?`)) e.preventDefault();
                   }}
@@ -44,7 +45,7 @@ export function ListaServicos({ servicos }: { servicos: Servico[] }) {
                   <button type="submit" className="grid size-11 place-items-center text-suave hover:text-saida" aria-label={`Excluir ${s.nome}`}>
                     <Trash2 className="size-4" />
                   </button>
-                </form>
+                </Formulario>
               </li>
             ),
           )}
@@ -71,7 +72,7 @@ function FormServico({ servico, aoTerminar }: { servico?: Servico; aoTerminar: (
   }, {});
   const erros = estado.erros ?? {};
   return (
-    <form action={acao} className="space-y-4">
+    <Formulario acao={acao} className="space-y-4">
       {estado.erro && <Aviso>{estado.erro}</Aviso>}
       {servico && <input type="hidden" name="id" value={servico.id} />}
       <Campo rotulo="Nome do serviço" nome="nome" defaultValue={servico?.nome} maxLength={120} erro={erros.nome} autoFocus />
@@ -98,6 +99,6 @@ function FormServico({ servico, aoTerminar }: { servico?: Servico; aoTerminar: (
           {salvando ? "Salvando..." : "Salvar"}
         </Botao>
       </div>
-    </form>
+    </Formulario>
   );
 }

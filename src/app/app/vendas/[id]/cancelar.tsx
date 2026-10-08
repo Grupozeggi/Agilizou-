@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { Undo2 } from "lucide-react";
 import { Aviso, Botao } from "@/components/ui";
 import { cancelarVenda } from "../acoes";
+import { Formulario } from "@/components/formulario";
 
 export function CancelarVenda({ id, numero }: { id: string; numero: number }) {
   const [confirmando, setConfirmando] = useState(false);
@@ -16,7 +17,7 @@ export function CancelarVenda({ id, numero }: { id: string; numero: number }) {
     );
   }
   return (
-    <form action={acao} className="space-y-3 rounded-xl border border-saida/30 bg-saida/5 p-4">
+    <Formulario acao={acao} className="space-y-3 rounded-xl border border-saida/30 bg-saida/5 p-4">
       <input type="hidden" name="id" value={id} />
       <p className="font-semibold text-tinta">Cancelar a venda #{numero}?</p>
       <p className="text-sm text-suave">Os produtos voltam para o estoque e a entrada sai do caixa.</p>
@@ -29,6 +30,6 @@ export function CancelarVenda({ id, numero }: { id: string; numero: number }) {
           {cancelando ? "Cancelando..." : "Cancelar venda"}
         </Botao>
       </div>
-    </form>
+    </Formulario>
   );
 }

@@ -7,6 +7,7 @@ import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { LISTA_NICHOS, type NichoId } from "@/config/nichos";
 import { concluirOnboarding } from "./acoes";
 import { ETAPA_DO_CAMPO } from "./validacao";
+import { Formulario } from "@/components/formulario";
 
 const ICONES: Record<NichoId, LucideIcon> = {
   mecanica: Car,
@@ -56,8 +57,8 @@ export function Assistente({ nomeInicial }: { nomeInicial: string }) {
       <p className="text-sm font-medium text-suave">Passo {etapa + 1} de 3</p>
       <h1 className="mt-1 text-2xl">{TITULOS[etapa]}</h1>
 
-      <form
-        action={acao}
+      <Formulario
+        acao={acao}
         className="mt-6 space-y-5"
         onSubmit={(e) => {
           // Segurança extra: o envio só acontece na última tela.
@@ -155,7 +156,7 @@ export function Assistente({ nomeInicial }: { nomeInicial: string }) {
             </Botao>
           )}
         </div>
-      </form>
+      </Formulario>
     </Cartao>
   );
 }

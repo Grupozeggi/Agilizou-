@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { EstadoForm } from "@/lib/formulario";
 import { hojeIso } from "@/lib/datas";
 import { FORMAS_PAGAMENTO } from "@/lib/lancamentos";
-import { exigirCliente } from "@/lib/sessao";
+import { exigirEscrita } from "@/lib/sessao";
 
 const item = z
   .object({
@@ -47,7 +47,8 @@ export async function registrarVenda(json: string): Promise<EstadoForm> {
   if (!r.success) return { erro: r.error.issues[0]?.message ?? "Confira os itens da venda." };
   if (r.data.data > hojeIso()) return { erro: "A data da venda não pode ser no futuro." };
 
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { agendamento_id, ...venda } = r.data;
   const { data: id, error } = await supabase.rpc("registrar_venda", { p_venda: venda });
   if (error) {
@@ -66,7 +67,8 @@ export async function registrarVenda(json: string): Promise<EstadoForm> {
 export async function cancelarVenda(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const id = String(form.get("id") ?? "");
   if (!z.uuid().safeParse(id).success) return { erro: "Venda inválida." };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error } = await supabase.rpc("cancelar_venda", { p_venda: id });
   if (error) {
     console.error("[vendas] cancelar", error);

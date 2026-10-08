@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { entrar } from "../acoes";
+import { Formulario } from "@/components/formulario";
 
 export function FormEntrar({ proximo, erroLink }: { proximo?: string; erroLink?: boolean }) {
   const [estado, acao, enviando] = useActionState(entrar, {});
@@ -13,7 +14,7 @@ export function FormEntrar({ proximo, erroLink }: { proximo?: string; erroLink?:
       <h1 className="text-2xl">Entrar</h1>
       <p className="mt-1 text-suave">Bom te ver de novo.</p>
 
-      <form action={acao} className="mt-6 space-y-4" noValidate>
+      <Formulario acao={acao} className="mt-6 space-y-4" noValidate>
         {erroLink && !estado.erro && (
           <Aviso>Este link é inválido ou já expirou. Entre com seu e-mail e senha ou peça um novo link.</Aviso>
         )}
@@ -45,7 +46,7 @@ export function FormEntrar({ proximo, erroLink }: { proximo?: string; erroLink?:
         <Botao type="submit" disabled={enviando}>
           {enviando ? "Entrando..." : "Entrar"}
         </Botao>
-      </form>
+      </Formulario>
 
       <p className="mt-6 text-center text-sm text-suave">
         Ainda não tem conta?{" "}

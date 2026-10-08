@@ -4,13 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { EstadoForm } from "@/lib/formulario";
 import { usoCadastro } from "@/lib/limites";
-import { exigirCliente } from "@/lib/sessao";
+import { exigirEscrita } from "@/lib/sessao";
 
 export async function salvarProfissional(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const id = String(form.get("id") ?? "");
   const nome = String(form.get("nome") ?? "").trim();
   if (!nome || nome.length > 120) return { erros: { nome: "Digite o nome." } };
-  const { supabase, empresa } = await exigirCliente();
+  const { supabase, empresa, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   if (id) {
     if (!z.uuid().safeParse(id).success) return { erro: "Profissional inválido." };
     const { error } = await supabase.from("profissionais").update({ nome }).eq("id", id);
@@ -29,7 +30,8 @@ export async function salvarProfissional(_: EstadoForm, form: FormData): Promise
 export async function removerProfissional(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const id = String(form.get("id") ?? "");
   if (!z.uuid().safeParse(id).success) return { erro: "Profissional inválido." };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error } = await supabase.from("profissionais").update({ deleted_at: new Date().toISOString(), ativo: false }).eq("id", id);
   if (error) return { erro: "Não foi possível remover." };
   revalidatePath("/app", "layout");

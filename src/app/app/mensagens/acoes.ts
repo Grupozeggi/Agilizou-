@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { EstadoForm } from "@/lib/formulario";
 import { REGUA_PADRAO } from "@/lib/regua";
-import { exigirCliente } from "@/lib/sessao";
+import { exigirEscrita } from "@/lib/sessao";
 
 export async function salvarRegua(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const regua = REGUA_PADRAO.map((p) => ({
@@ -20,7 +20,8 @@ export async function salvarRegua(_: EstadoForm, form: FormData): Promise<Estado
     const i = Number(r.error.issues[0].path[0]);
     return { erros: { [`modelo_${regua[i].etapa}`]: r.error.issues[0].message } };
   }
-  const { supabase, empresa } = await exigirCliente();
+  const { supabase, empresa, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error } = await supabase
     .from("empresas")
     .update({ whatsapp_ativo: form.get("whatsapp_ativo") === "on", regua_whatsapp: regua })

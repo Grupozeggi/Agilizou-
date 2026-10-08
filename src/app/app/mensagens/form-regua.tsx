@@ -5,6 +5,7 @@ import { Aviso, Botao, Cartao } from "@/components/ui";
 import { preencher } from "@/lib/mensagens";
 import { NOMES_ETAPA, type PassoRegua } from "@/lib/regua";
 import { salvarRegua } from "./acoes";
+import { Formulario } from "@/components/formulario";
 
 const VARIAVEIS = ["{nome}", "{data}", "{hora}", "{profissional}", "{servico}", "{empresa}"];
 
@@ -14,7 +15,7 @@ export function FormRegua({ ativo, regua, empresa, bloqueado }: { ativo: boolean
   const exemplo = { nome: "Ana", data: "15/10", hora: "14:00", profissional: "Carla", servico: "Corte", empresa };
 
   return (
-    <form action={acao} className="space-y-3">
+    <Formulario acao={acao} className="space-y-3">
       {estado.sucesso && <Aviso tipo="sucesso">{estado.sucesso}</Aviso>}
       {estado.erro && <Aviso>{estado.erro}</Aviso>}
       <Cartao className="p-4">
@@ -49,6 +50,6 @@ export function FormRegua({ ativo, regua, empresa, bloqueado }: { ativo: boolean
       <Botao type="submit" disabled={salvando}>
         {salvando ? "Salvando..." : "Salvar mensagens"}
       </Botao>
-    </form>
+    </Formulario>
   );
 }

@@ -18,6 +18,14 @@ export async function GET(request: Request) {
 
   const db = criarClienteServico();
   const hoje = hojeIso();
+
+  // Renovação cancelada e período pago encerrado: vira somente leitura.
+  await db
+    .from("empresas")
+    .update({ status_assinatura: "cancelado" })
+    .eq("status_assinatura", "ativo")
+    .not("cancelado_em", "is", null)
+    .lte("proxima_cobranca", hoje);
   const ate = somarDias(hoje, 7);
 
   const [{ data: empresas }, { data: contas }, { data: lembretes }, { data: perfis }, { data: inscricoes }] = await Promise.all([

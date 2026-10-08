@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { recuperarSenha } from "../acoes";
+import { Formulario } from "@/components/formulario";
 
 export function FormRecuperar() {
   const [estado, acao, enviando] = useActionState(recuperarSenha, {});
@@ -18,7 +19,7 @@ export function FormRecuperar() {
           <Aviso tipo="sucesso">{estado.sucesso}</Aviso>
         </div>
       ) : (
-        <form action={acao} className="mt-6 space-y-4" noValidate>
+        <Formulario acao={acao} className="mt-6 space-y-4" noValidate>
           {estado.erro && <Aviso>{estado.erro}</Aviso>}
           <Campo
             rotulo="E-mail"
@@ -33,7 +34,7 @@ export function FormRecuperar() {
           <Botao type="submit" disabled={enviando}>
             {enviando ? "Enviando..." : "Enviar link"}
           </Botao>
-        </form>
+        </Formulario>
       )}
 
       <p className="mt-6 text-center text-sm">

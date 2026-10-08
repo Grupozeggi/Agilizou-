@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import type { StatusAgenda } from "@/lib/agenda";
 import { mudarStatus, remarcar } from "../acoes";
+import { Formulario } from "@/components/formulario";
 
 export function AcoesAtendimento({ id, status, hoje, jaComecou }: { id: string; status: StatusAgenda; hoje: string; jaComecou: boolean }) {
   const router = useRouter();
@@ -57,7 +58,7 @@ export function AcoesAtendimento({ id, status, hoje, jaComecou }: { id: string; 
       )}
       {remarcando && (
         <Cartao className="p-4">
-          <form action={acaoRemarcar} className="space-y-3">
+          <Formulario acao={acaoRemarcar} className="space-y-3">
             <input type="hidden" name="id" value={id} />
             {estado.erro && <Aviso>{estado.erro}</Aviso>}
             <div className="grid grid-cols-2 gap-3">
@@ -67,7 +68,7 @@ export function AcoesAtendimento({ id, status, hoje, jaComecou }: { id: string; 
             <Botao type="submit" disabled={salvando}>
               {salvando ? "Remarcando..." : "Confirmar novo horário"}
             </Botao>
-          </form>
+          </Formulario>
         </Cartao>
       )}
     </div>

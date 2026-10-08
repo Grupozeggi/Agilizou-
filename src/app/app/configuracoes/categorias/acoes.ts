@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { errosPorCampo, type EstadoForm } from "@/lib/formulario";
-import { criarClienteServidor } from "@/lib/supabase/servidor";
+import { exigirEscrita } from "@/lib/sessao";
 import { esquemaNovaCategoria, esquemaRemover, esquemaRenomear, TIPOS_CATEGORIA } from "./validacao";
 
 const CAMINHO = "/app/configuracoes/categorias";
@@ -15,7 +15,8 @@ export async function criarCategoria(_: EstadoForm, form: FormData): Promise<Est
   const r = esquemaNovaCategoria.safeParse({ nome: form.get("nome"), classe: form.get("classe") });
   if (!r.success) return { erros: errosPorCampo(r.error) };
 
-  const supabase = await criarClienteServidor();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error } = await supabase.from("categorias").insert({ nome: r.data.nome, ...TIPOS_CATEGORIA[r.data.classe] });
   if (error) {
     if (error.code === "23505") return { erros: { nome: NOME_REPETIDO } };
@@ -30,7 +31,8 @@ export async function renomearCategoria(_: EstadoForm, form: FormData): Promise<
   const r = esquemaRenomear.safeParse({ id: form.get("id"), nome: form.get("nome") });
   if (!r.success) return { erros: errosPorCampo(r.error) };
 
-  const supabase = await criarClienteServidor();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error, count } = await supabase
     .from("categorias")
     .update({ nome: r.data.nome }, { count: "exact" })
@@ -51,7 +53,8 @@ export async function removerCategoria(_: EstadoForm, form: FormData): Promise<E
   const r = esquemaRemover.safeParse({ id: form.get("id") });
   if (!r.success) return { erro: "Categoria inválida." };
 
-  const supabase = await criarClienteServidor();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error, count } = await supabase
     .from("categorias")
     .update({ deleted_at: new Date().toISOString() }, { count: "exact" })

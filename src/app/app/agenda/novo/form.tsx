@@ -7,6 +7,7 @@ import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { horariosLivres, paraMinutos, partesSp } from "@/lib/agenda";
 import { formatarReais } from "@/lib/dinheiro";
 import { agendar } from "../acoes";
+import { Formulario } from "@/components/formulario";
 
 type Cadastros = {
   profissionais: { id: string; nome: string }[];
@@ -57,7 +58,7 @@ export function FormAgendamento({
   const escolhido = cadastros.clientes.find((c) => c.id === cliente);
 
   return (
-    <form action={acao} className="space-y-4">
+    <Formulario acao={acao} className="space-y-4">
       {estado.erro && <Aviso>{estado.erro}</Aviso>}
       <Cartao className="space-y-3 p-4">
         <span className="block text-sm font-medium capitalize text-tinta">{termos.cliente}</span>
@@ -171,6 +172,6 @@ export function FormAgendamento({
       <Botao type="submit" disabled={salvando || !cliente || !hora}>
         {salvando ? "Agendando..." : hora ? `Agendar às ${hora}` : "Escolha o horário"}
       </Botao>
-    </form>
+    </Formulario>
   );
 }

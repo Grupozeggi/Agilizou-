@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { EstadoForm } from "@/lib/formulario";
-import { exigirCliente } from "@/lib/sessao";
+import { exigirEscrita } from "@/lib/sessao";
 
 const esquema = z.object({
   aviso_email: z.boolean(),
@@ -20,7 +20,8 @@ export async function salvarAvisos(_: EstadoForm, form: FormData): Promise<Estad
     aviso_dias_antes: form.get("aviso_dias_antes"),
   });
   if (!r.success) return { erro: "Confira as opções." };
-  const { supabase, empresa } = await exigirCliente();
+  const { supabase, empresa, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error } = await supabase.from("empresas").update(r.data).eq("id", empresa.id);
   if (error) return { erro: "Não foi possível salvar." };
   revalidatePath("/app/configuracoes/avisos");
@@ -42,7 +43,8 @@ export async function salvarInscricaoPush(json: string): Promise<EstadoForm> {
   }
   const r = inscricao.safeParse(bruto);
   if (!r.success) return { erro: "Inscrição inválida." };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   // Mesmo aparelho de novo: substitui.
   await supabase.from("notificacoes_push").delete().eq("endpoint", r.data.endpoint);
   const { error } = await supabase

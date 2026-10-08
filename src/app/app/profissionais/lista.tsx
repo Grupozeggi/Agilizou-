@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { Trash2, UserPlus } from "lucide-react";
 import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { removerProfissional, salvarProfissional } from "./acoes";
+import { Formulario } from "@/components/formulario";
 
 export function ListaProfissionais({ profissionais, termo }: { profissionais: { id: string; nome: string }[]; termo: string }) {
   const [estado, acao, salvando] = useActionState(salvarProfissional, {});
@@ -16,8 +17,8 @@ export function ListaProfissionais({ profissionais, termo }: { profissionais: { 
           {profissionais.map((p) => (
             <li key={p.id} className="flex items-center justify-between py-1 pl-4 pr-2">
               <span className="font-medium text-tinta">{p.nome}</span>
-              <form
-                action={remover}
+              <Formulario
+                acao={remover}
                 onSubmit={(e) => {
                   if (!confirm(`Remover ${p.nome} da agenda? Os atendimentos antigos continuam no histórico.`)) e.preventDefault();
                 }}
@@ -26,13 +27,13 @@ export function ListaProfissionais({ profissionais, termo }: { profissionais: { 
                 <button type="submit" className="grid size-11 place-items-center text-suave hover:text-saida" aria-label={`Remover ${p.nome}`}>
                   <Trash2 className="size-4" />
                 </button>
-              </form>
+              </Formulario>
             </li>
           ))}
         </ul>
       )}
       <Cartao>
-        <form action={acao} className="space-y-3" key={profissionais.length}>
+        <Formulario acao={acao} className="space-y-3" key={profissionais.length}>
           {estado.erro && (
             <Aviso>
               {estado.erro}
@@ -47,7 +48,7 @@ export function ListaProfissionais({ profissionais, termo }: { profissionais: { 
           <Botao type="submit" disabled={salvando}>
             <UserPlus className="size-4" /> Adicionar
           </Botao>
-        </form>
+        </Formulario>
       </Cartao>
     </div>
   );

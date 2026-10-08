@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { errosPorCampo, type EstadoForm } from "@/lib/formulario";
 import { usoCadastro } from "@/lib/limites";
-import { exigirCliente } from "@/lib/sessao";
+import { exigirEscrita } from "@/lib/sessao";
 import { dadosDoForm } from "../lancamentos/validacao";
 import { esquemaMovimento, esquemaProduto } from "./validacao";
 
@@ -13,7 +13,8 @@ export async function salvarProduto(_: EstadoForm, form: FormData): Promise<Esta
   const r = esquemaProduto.safeParse(dadosDoForm(form));
   if (!r.success) return { erros: errosPorCampo(r.error) };
   const d = r.data;
-  const { supabase, empresa } = await exigirCliente();
+  const { supabase, empresa, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
 
   const dados = {
     nome: d.nome,
@@ -56,7 +57,8 @@ function erroProduto(error: { code?: string; message?: string }): EstadoForm {
 export async function excluirProduto(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const id = String(form.get("id") ?? "");
   if (!z.uuid().safeParse(id).success) return { erro: "Produto inválido." };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error, count } = await supabase
     .from("produtos")
     .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
@@ -71,7 +73,8 @@ export async function movimentarEstoque(_: EstadoForm, form: FormData): Promise<
   const r = esquemaMovimento.safeParse(dadosDoForm(form));
   if (!r.success) return { erros: errosPorCampo(r.error) };
   const d = r.data;
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
 
   const { error } = await supabase.rpc("movimentar_estoque", {
     p_produto: d.produto_id,

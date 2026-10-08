@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { mensagemDeErroAuth } from "@/lib/erros";
 import { criarClienteNavegador } from "@/lib/supabase/navegador";
+import { Formulario } from "@/components/formulario";
 
 type Etapa =
   | { tipo: "carregando" }
@@ -74,7 +75,7 @@ export function Verificacao2fa() {
       {etapa.tipo === "verificar" && (
         <p className="mt-2 text-suave">Digite o código de 6 números do seu app autenticador.</p>
       )}
-      <form action={verificar} className="mt-6 space-y-4">
+      <Formulario acao={verificar} className="mt-6 space-y-4">
         {erro && <Aviso>{erro}</Aviso>}
         <Campo
           rotulo="Código"
@@ -89,7 +90,7 @@ export function Verificacao2fa() {
         <Botao type="submit" disabled={enviando || etapa.tipo === "carregando"}>
           {enviando ? "Verificando..." : "Verificar"}
         </Botao>
-      </form>
+      </Formulario>
     </Cartao>
   );
 }

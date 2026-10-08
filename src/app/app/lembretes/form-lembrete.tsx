@@ -5,6 +5,7 @@ import { CampoDinheiro } from "@/components/campo-dinheiro";
 import { Aviso, Botao, Campo } from "@/components/ui";
 import type { EstadoForm } from "@/lib/formulario";
 import { criarLembrete } from "./acoes";
+import { Formulario } from "@/components/formulario";
 
 export function FormLembrete({ hoje, clientes, aoSalvar }: { hoje: string; clientes: { id: string; nome: string }[]; aoSalvar?: () => void }) {
   const [versao, setVersao] = useState(0);
@@ -20,7 +21,7 @@ export function FormLembrete({ hoje, clientes, aoSalvar }: { hoje: string; clien
   const erros = estado.erros ?? {};
 
   return (
-    <form key={versao} action={acao} className="space-y-4">
+    <Formulario key={versao} acao={acao} className="space-y-4">
       {estado.sucesso && <Aviso tipo="sucesso">{estado.sucesso}</Aviso>}
       {estado.erro && <Aviso>{estado.erro}</Aviso>}
       <div className="grid grid-cols-3 gap-1 rounded-xl bg-cartao p-1">
@@ -70,6 +71,6 @@ export function FormLembrete({ hoje, clientes, aoSalvar }: { hoje: string; clien
       <Botao type="submit" disabled={salvando}>
         {salvando ? "Salvando..." : "Criar lembrete"}
       </Botao>
-    </form>
+    </Formulario>
   );
 }

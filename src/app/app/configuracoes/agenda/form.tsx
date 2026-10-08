@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { salvarConfigAgenda } from "../../agenda/acoes";
+import { Formulario } from "@/components/formulario";
 
 const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -10,7 +11,7 @@ export function FormConfigAgenda({ inicial }: { inicial: { agenda_ativa: boolean
   const [estado, acao, salvando] = useActionState(salvarConfigAgenda, {});
   return (
     <Cartao>
-      <form action={acao} className="space-y-4">
+      <Formulario acao={acao} className="space-y-4">
         {estado.sucesso && <Aviso tipo="sucesso">{estado.sucesso}</Aviso>}
         {estado.erro && <Aviso>{estado.erro}</Aviso>}
         <label className="flex min-h-11 items-center justify-between gap-3 text-sm font-medium text-tinta">
@@ -35,7 +36,7 @@ export function FormConfigAgenda({ inicial }: { inicial: { agenda_ativa: boolean
         <Botao type="submit" disabled={salvando}>
           {salvando ? "Salvando..." : "Salvar"}
         </Botao>
-      </form>
+      </Formulario>
     </Cartao>
   );
 }

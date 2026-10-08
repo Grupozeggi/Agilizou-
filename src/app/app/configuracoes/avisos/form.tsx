@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { BellRing } from "lucide-react";
 import { Aviso, Botao, Cartao } from "@/components/ui";
 import { salvarAvisos, salvarInscricaoPush } from "./acoes";
+import { Formulario } from "@/components/formulario";
 
 type Prefs = { aviso_email: boolean; aviso_push: boolean; aviso_no_dia: boolean; aviso_dias_antes: number };
 
@@ -13,7 +14,7 @@ export function FormAvisos({ inicial, chavePublica }: { inicial: Prefs; chavePub
   return (
     <div className="space-y-4">
       <Cartao>
-        <form action={acao} className="space-y-4">
+        <Formulario acao={acao} className="space-y-4">
           {estado.sucesso && <Aviso tipo="sucesso">{estado.sucesso}</Aviso>}
           {estado.erro && <Aviso>{estado.erro}</Aviso>}
           <Opcao nome="aviso_email" rotulo="Avisar por e-mail" inicial={inicial.aviso_email} />
@@ -33,7 +34,7 @@ export function FormAvisos({ inicial, chavePublica }: { inicial: Prefs; chavePub
           <Botao type="submit" disabled={salvando}>
             {salvando ? "Salvando..." : "Salvar"}
           </Botao>
-        </form>
+        </Formulario>
       </Cartao>
       <AtivarPush chavePublica={chavePublica} />
     </div>

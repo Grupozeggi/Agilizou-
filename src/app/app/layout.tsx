@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { NavInferior } from "@/components/nav-inferior";
+import { mensagemSomenteLeitura } from "@/lib/assinatura";
 import { exigirCliente } from "@/lib/sessao";
 import { sair } from "@/app/(auth)/acoes";
 
@@ -10,6 +11,7 @@ export default async function LayoutApp({ children }: LayoutProps<"/app">) {
   const { empresa } = await exigirCliente();
   // Quem ainda não respondeu as 3 perguntas iniciais vai para o onboarding.
   if (!empresa.onboarding_concluido) redirect("/boas-vindas");
+  const bloqueio = mensagemSomenteLeitura(empresa.status_assinatura, empresa.teste_ate);
 
   return (
     <div className="flex min-h-dvh flex-col bg-cartao">
@@ -33,6 +35,11 @@ export default async function LayoutApp({ children }: LayoutProps<"/app">) {
           </div>
         </div>
       </header>
+      {bloqueio && (
+        <Link href="/app/assinatura" className="block bg-dourado/15 px-4 py-2.5 text-center text-sm text-royal-escuro print:hidden">
+          {bloqueio} <strong className="underline">Ver planos</strong>
+        </Link>
+      )}
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-28 pt-6">{children}</main>
       <NavInferior agenda={empresa.agenda_ativa} />
     </div>

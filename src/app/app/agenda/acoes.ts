@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { instanteSp } from "@/lib/agenda";
 import { errosPorCampo, type EstadoForm } from "@/lib/formulario";
-import { exigirCliente } from "@/lib/sessao";
+import { exigirEscrita } from "@/lib/sessao";
 import { dadosDoForm } from "../lancamentos/validacao";
 import { planejarMensagens } from "../mensagens/fila";
 
@@ -35,7 +35,8 @@ export async function agendar(_: EstadoForm, form: FormData): Promise<EstadoForm
   const d = r.data;
   const inicio = new Date(instanteSp(d.data, d.hora));
   const fim = new Date(inicio.getTime() + d.duracao * 60_000);
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
 
   const { data: criado, error } = await supabase
     .from("agendamentos")
@@ -64,7 +65,8 @@ const STATUS = ["agendado", "confirmado", "compareceu", "faltou", "cancelado"] a
 /** Um toque: confirmar, compareceu, faltou ou cancelar. */
 export async function mudarStatus(id: string, status: (typeof STATUS)[number]): Promise<EstadoForm> {
   if (!z.uuid().safeParse(id).success || !STATUS.includes(status)) return { erro: "Ação inválida." };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const presenca = status === "compareceu" || status === "faltou";
   const { error } = await supabase
     .from("agendamentos")
@@ -91,7 +93,8 @@ const esquemaRemarcar = z.object({ id: z.uuid(), data, hora });
 export async function remarcar(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const r = esquemaRemarcar.safeParse(dadosDoForm(form));
   if (!r.success) return { erros: errosPorCampo(r.error) };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { data: antigo } = await supabase
     .from("agendamentos")
     .select("id, cliente_id, profissional_id, servico_id, inicio, fim, observacao")
@@ -144,7 +147,8 @@ export async function salvarConfigAgenda(_: EstadoForm, form: FormData): Promise
       dias_funcionamento: form.getAll("dias_funcionamento"),
     });
   if (!r.success) return { erros: errosPorCampo(r.error) };
-  const { supabase, empresa } = await exigirCliente();
+  const { supabase, empresa, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const { error } = await supabase.from("empresas").update(r.data).eq("id", empresa.id);
   if (error) return { erro: "Não foi possível salvar." };
   revalidar();

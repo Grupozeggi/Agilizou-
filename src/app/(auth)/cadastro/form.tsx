@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { cadastrar } from "../acoes";
+import { Formulario } from "@/components/formulario";
 
 export function FormCadastro() {
   const [estado, acao, enviando] = useActionState(cadastrar, {});
@@ -25,7 +26,7 @@ export function FormCadastro() {
       <h1 className="text-2xl">Teste grátis por 7 dias</h1>
       <p className="mt-1 text-suave">Sem cartão. Leva menos de um minuto.</p>
 
-      <form action={acao} className="mt-6 space-y-4" noValidate>
+      <Formulario acao={acao} className="mt-6 space-y-4" noValidate>
         {estado.erro && <Aviso>{estado.erro}</Aviso>}
         <Campo
           rotulo="Seu nome"
@@ -81,7 +82,7 @@ export function FormCadastro() {
         <Botao type="submit" disabled={enviando}>
           {enviando ? "Criando sua conta..." : "Criar conta grátis"}
         </Botao>
-      </form>
+      </Formulario>
 
       <p className="mt-6 text-center text-sm text-suave">
         Já tem conta?{" "}

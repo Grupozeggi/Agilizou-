@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { Aviso, Botao, Campo } from "@/components/ui";
 import { formatarWhatsapp } from "@/lib/mensagens";
 import { salvarCliente } from "./acoes";
+import { Formulario } from "@/components/formulario";
 
 type Cliente = { id: string; nome: string; whatsapp: string | null; observacoes: string | null; aceita_mensagens: boolean };
 
@@ -12,7 +13,7 @@ export function FormCliente({ cliente, termo, voltar, avisoLimite }: { cliente?:
   const [estado, acao, salvando] = useActionState(salvarCliente, {});
   const erros = estado.erros ?? {};
   return (
-    <form action={acao} className="space-y-4">
+    <Formulario acao={acao} className="space-y-4">
       {avisoLimite && !estado.erro && <Aviso tipo="info">{avisoLimite}</Aviso>}
       {estado.erro && (
         <Aviso>
@@ -52,6 +53,6 @@ export function FormCliente({ cliente, termo, voltar, avisoLimite }: { cliente?:
       <Botao type="submit" disabled={salvando}>
         {salvando ? "Salvando..." : cliente ? "Salvar alterações" : "Cadastrar"}
       </Botao>
-    </form>
+    </Formulario>
   );
 }

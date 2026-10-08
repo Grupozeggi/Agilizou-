@@ -3,6 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { Limites } from "@/config/planos";
 import { adminCom2fa, type Claims } from "@/lib/acesso";
+import { mensagemSomenteLeitura } from "@/lib/assinatura";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 
 /**
@@ -56,3 +57,14 @@ export const exigirAdmin = cache(async () => {
   if (!adminCom2fa(claims)) redirect("/acesso-negado");
   return { claims, supabase: await criarClienteServidor() };
 });
+
+/**
+ * Para ações que gravam: além do usuário e da empresa, devolve `bloqueio`
+ * (texto) quando a conta está somente leitura (teste vencido,
+ * inadimplente, cancelada). O banco também recusa (RLS), isto só deixa a
+ * mensagem clara.
+ */
+export async function exigirEscrita() {
+  const ctx = await exigirCliente();
+  return { ...ctx, bloqueio: mensagemSomenteLeitura(ctx.empresa.status_assinatura, ctx.empresa.teste_ate) };
+}

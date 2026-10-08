@@ -7,7 +7,7 @@ import { hojeIso } from "@/lib/datas";
 import { errosPorCampo, type EstadoForm } from "@/lib/formulario";
 import { gerarParcelas, gerarRecorrencias, type Ocorrencia } from "@/lib/lancamentos";
 import { usoLancamentos } from "@/lib/limites";
-import { exigirCliente } from "@/lib/sessao";
+import { exigirEscrita } from "@/lib/sessao";
 import { dadosDoForm, esquemaEditarLancamento, esquemaExcluir, esquemaId, esquemaNovoLancamento } from "./validacao";
 
 // Todas as ações usam o cliente do usuário: a RLS garante que só a empresa
@@ -31,7 +31,8 @@ export async function criarLancamento(_: EstadoForm, form: FormData): Promise<Es
   if (!r.success) return { erros: errosPorCampo(r.error) };
   const d = r.data;
 
-  const { supabase, empresa } = await exigirCliente();
+  const { supabase, empresa, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const uso = await usoLancamentos(supabase, empresa);
   if (uso.situacao === "bloqueado") return { erro: uso.mensagem, limiteAtingido: true };
 
@@ -80,7 +81,8 @@ export async function editarLancamento(_: EstadoForm, form: FormData): Promise<E
   const r = esquemaEditarLancamento.safeParse(dadosDoForm(form));
   if (!r.success) return { erros: errosPorCampo(r.error) };
   const d = r.data;
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
 
   const { data: atual, error: erroBusca } = await supabase
     .from("lancamentos")
@@ -135,7 +137,8 @@ export async function editarLancamento(_: EstadoForm, form: FormData): Promise<E
 export async function excluirLancamento(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const r = esquemaExcluir.safeParse(dadosDoForm(form));
   if (!r.success) return { erro: "Lançamento inválido." };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
 
   const { data: atual } = await supabase
     .from("lancamentos")
@@ -162,7 +165,8 @@ export async function excluirLancamento(_: EstadoForm, form: FormData): Promise<
 export async function marcarComoPago(id: string): Promise<EstadoForm> {
   const r = esquemaId.safeParse({ id });
   if (!r.success) return { erro: "Lançamento inválido." };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
   const hoje = hojeIso();
 
   const { data, error } = await supabase
@@ -183,7 +187,8 @@ export async function marcarComoPago(id: string): Promise<EstadoForm> {
 export async function desfazerPagamento(id: string): Promise<EstadoForm> {
   const r = esquemaId.safeParse({ id });
   if (!r.success) return { erro: "Lançamento inválido." };
-  const { supabase } = await exigirCliente();
+  const { supabase, bloqueio } = await exigirEscrita();
+  if (bloqueio) return { erro: bloqueio, limiteAtingido: true };
 
   const { data: atual } = await supabase
     .from("lancamentos")

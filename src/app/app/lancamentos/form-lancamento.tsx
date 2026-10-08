@@ -8,6 +8,7 @@ import { Aviso, Botao, Campo } from "@/components/ui";
 import type { EstadoForm } from "@/lib/formulario";
 import { FORMAS_PAGAMENTO } from "@/lib/lancamentos";
 import { criarLancamento, editarLancamento, excluirLancamento } from "./acoes";
+import { Formulario } from "@/components/formulario";
 
 export type CategoriaOpcao = { id: string; nome: string; tipo: "entrada" | "saida" };
 
@@ -133,7 +134,7 @@ function Campos({
   const ehEntrada = tipo === "entrada";
 
   return (
-    <form action={acao} className="space-y-5">
+    <Formulario acao={acao} className="space-y-5">
       {lancamento && <input type="hidden" name="id" value={lancamento.id} />}
       <input type="hidden" name="tipo" value={tipo} />
 
@@ -352,7 +353,7 @@ function Campos({
       <Botao type="submit" disabled={salvando}>
         {salvando ? "Salvando..." : lancamento ? "Salvar alterações" : "Salvar"}
       </Botao>
-    </form>
+    </Formulario>
   );
 }
 
@@ -395,7 +396,7 @@ function Excluir({ lancamento }: { lancamento: LancamentoEditavel }) {
   }
 
   return (
-    <form action={acao} className="space-y-3 rounded-xl border border-saida/30 bg-saida/5 p-4">
+    <Formulario acao={acao} className="space-y-3 rounded-xl border border-saida/30 bg-saida/5 p-4">
       <input type="hidden" name="id" value={lancamento.id} />
       <p className="font-semibold text-tinta">Excluir este lançamento?</p>
       {lancamento.grupo_id && <EscopoSerie lancamento={lancamento} acao="excluir" />}
@@ -408,6 +409,6 @@ function Excluir({ lancamento }: { lancamento: LancamentoEditavel }) {
           {excluindo ? "Excluindo..." : "Excluir"}
         </Botao>
       </div>
-    </form>
+    </Formulario>
   );
 }

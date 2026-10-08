@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Aviso, Botao, Campo, Cartao } from "@/components/ui";
 import { criarCategoria, removerCategoria, renomearCategoria } from "./acoes";
+import { Formulario } from "@/components/formulario";
 
 export function LinhaCategoria({ id, nome }: { id: string; nome: string }) {
   const [editando, setEditando] = useState(false);
@@ -20,7 +21,7 @@ export function LinhaCategoria({ id, nome }: { id: string; nome: string }) {
   if (editando) {
     return (
       <li className="px-5 py-3">
-        <form action={renomear} className="space-y-3">
+        <Formulario acao={renomear} className="space-y-3">
           <input type="hidden" name="id" value={id} />
           <Campo rotulo="Nome" nome="nome" defaultValue={nome} maxLength={60} autoFocus erro={estado.erros?.nome} />
           {estado.erro && <Aviso>{estado.erro}</Aviso>}
@@ -32,7 +33,7 @@ export function LinhaCategoria({ id, nome }: { id: string; nome: string }) {
               {salvando ? "Salvando..." : "Salvar"}
             </Botao>
           </div>
-        </form>
+        </Formulario>
       </li>
     );
   }
@@ -49,8 +50,8 @@ export function LinhaCategoria({ id, nome }: { id: string; nome: string }) {
       >
         <Pencil className="size-4" strokeWidth={1.75} />
       </button>
-      <form
-        action={remover}
+      <Formulario
+        acao={remover}
         onSubmit={(e) => {
           if (!confirm(`Remover a categoria "${nome}"? Os lançamentos antigos continuam com ela.`)) e.preventDefault();
         }}
@@ -64,7 +65,7 @@ export function LinhaCategoria({ id, nome }: { id: string; nome: string }) {
         >
           <Trash2 className="size-4" strokeWidth={1.75} />
         </button>
-      </form>
+      </Formulario>
     </li>
   );
 }
@@ -82,7 +83,7 @@ export function NovaCategoria() {
       <h2 className="flex items-center gap-2 text-lg">
         <Plus className="size-5 text-dourado" strokeWidth={1.75} /> Nova categoria
       </h2>
-      <form ref={form} action={acao} className="mt-4 space-y-4">
+      <Formulario ref={form} acao={acao} className="mt-4 space-y-4">
         {estado.erro && <Aviso>{estado.erro}</Aviso>}
         {estado.sucesso && <Aviso tipo="sucesso">{estado.sucesso}</Aviso>}
         <Campo rotulo="Nome" nome="nome" maxLength={60} placeholder="Ex.: Marketing" erro={estado.erros?.nome} />
@@ -108,7 +109,7 @@ export function NovaCategoria() {
         <Botao type="submit" disabled={salvando}>
           {salvando ? "Salvando..." : "Adicionar"}
         </Botao>
-      </form>
+      </Formulario>
     </Cartao>
   );
 }

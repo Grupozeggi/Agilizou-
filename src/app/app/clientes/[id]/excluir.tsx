@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Aviso, Botao } from "@/components/ui";
 import { excluirCliente } from "../acoes";
+import { Formulario } from "@/components/formulario";
 
 export function ExcluirCliente({ id, nome }: { id: string; nome: string }) {
   const [confirmando, setConfirmando] = useState(false);
@@ -16,7 +17,7 @@ export function ExcluirCliente({ id, nome }: { id: string; nome: string }) {
     );
   }
   return (
-    <form action={acao} className="space-y-3 rounded-xl border border-saida/30 bg-saida/5 p-4">
+    <Formulario acao={acao} className="space-y-3 rounded-xl border border-saida/30 bg-saida/5 p-4">
       <input type="hidden" name="id" value={id} />
       <p className="font-semibold text-tinta">Excluir “{nome}”?</p>
       <p className="text-sm text-suave">O histórico de vendas e atendimentos continua guardado.</p>
@@ -29,6 +30,6 @@ export function ExcluirCliente({ id, nome }: { id: string; nome: string }) {
           {excluindo ? "Excluindo..." : "Excluir"}
         </Botao>
       </div>
-    </form>
+    </Formulario>
   );
 }

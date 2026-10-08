@@ -8,6 +8,7 @@ import { Aviso, Botao, Campo } from "@/components/ui";
 import { formatarReais } from "@/lib/dinheiro";
 import { margemProduto, UNIDADES } from "@/lib/estoque";
 import { salvarProduto } from "./acoes";
+import { Formulario } from "@/components/formulario";
 
 type Inicial = {
   id?: string;
@@ -30,7 +31,7 @@ export function FormProduto({ inicial = {}, avisoLimite }: { inicial?: Inicial; 
   const erros = estado.erros ?? {};
 
   return (
-    <form action={acao} className="space-y-5">
+    <Formulario acao={acao} className="space-y-5">
       {avisoLimite && !estado.erro && <Aviso tipo="info">{avisoLimite}</Aviso>}
       {estado.erro && (
         <Aviso>
@@ -114,7 +115,7 @@ export function FormProduto({ inicial = {}, avisoLimite }: { inicial?: Inicial; 
       <Botao type="submit" disabled={salvando}>
         {salvando ? "Salvando..." : inicial.id ? "Salvar alterações" : "Cadastrar produto"}
       </Botao>
-    </form>
+    </Formulario>
   );
 }
 
